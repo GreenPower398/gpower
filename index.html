@@ -611,6 +611,8 @@ th.r,td.r{text-align:right}
 
 
 
+
+
 const CAT_SUB_MAP = {"順勢": ["貼片", "居家用品", "凝膠"], "紅光": ["燈"], "電磁波": ["貼片"], "生理時鐘": ["眼鏡", "燈"], "低溫": ["冰袋"], "書": ["書", "卡"], "接地": ["床具", "配件", "襪子", "墊子", "工具", "布鞋", "鞋墊", "拖鞋"], "空氣清淨": ["Suvios"]};
 
 
@@ -1057,7 +1059,7 @@ function saveOrders(){
     // Supabase sync
     supaWrite('orders', slim, 'id');
     supaWrite('purchases', PURCHASES.map(p=>({id:p.id,date:p.date,order_date:p.orderDate||'',vendor:p.vendor||'',product_id:p.productId,product_name:p.productName,qty:p.qty,cost:p.cost,note:p.note||''})), 'id');
-    const extraRows=Object.entries(PROD_EXTRA).map(([id,ex])=>({product_id:id,vendor:ex.vendor||'',disabled:!!ex.disabled,lead_orders:ex.leadOrders||[]}));
+    const extraRows=Object.entries(PROD_EXTRA).map(([id,ex])=>({product_id:id,vendor:ex.vendor||'',disabled:!!ex.disabled,lead_orders:ex.leadOrders||[],cost:p.cost!=null?p.cost:null,price:p.price!=null?p.price:null}));
     if(extraRows.length)supaWrite('prod_extra',extraRows,'product_id');
   }catch(e){console.warn('saveOrders:',e);}
 }
@@ -1374,12 +1376,21 @@ function renderOverview(){
     mc.style.width=_chartW+'px';
     // Profit data
     // Estimate profit using avg margin from product cost/price data
-    const avgMargin=(()=>{
-      const ps=PRODS.filter(p=>p.cost!=null&&p.price!=null&&p.price>0);
-      if(!ps.length)return 0.6;
-      return ps.reduce((s,p)=>(s+(p.price-p.cost)/p.price),0)/ps.length;
-    })();
-    const pData=data.map(d=>({...d,profit:Math.round(d.rev*avgMargin)}));
+    // 計算每月估算毛利（用各品項實際成本）
+    function estProfit(orders){
+      return orders.reduce((total,o)=>{
+        const itemProfit=(o.items||[]).reduce((s,it)=>{
+          const prod=it.prod||(it.prodId?PRODS.find(p=>p.id===it.prodId):null);
+          const cost=prod&&prod.cost!=null?prod.cost:0;
+          return s+((it.actualSub||it.sub||0)-cost*(it.qty||0));
+        },0);
+        return total+Math.max(itemProfit,0);
+      },0);
+    }
+    const pData=data.map(d=>{
+      const orders=d.empty?[]:getOrds(d.m,'','','');
+      return{...d,profit:Math.round(estProfit(orders))};
+    });
     const maxP=Math.max(...pData.map(d=>d.profit),1);
     // Revenue bars only (profit shown separately below)
     mc.innerHTML=pData.map(d=>{
@@ -1624,8 +1635,15 @@ function saveProdEdit(){
   const cv=$el('pm-cost').value,pv=$el('pm-price').value;
   p.cost=cv===''?null:parseFloat(cv);p.price=parseFloat(pv)||p.price;
   try{localStorage.setItem('gpower_prods',JSON.stringify(PRODS.map(x=>({id:x.id,cost:x.cost,price:x.price}))));}catch(e){}
+  // 同步存到 Supabase prod_extra
+  const ex2=PROD_EXTRA[p.id]||{};
+  fetch(SUPA_URL+'/rest/v1/prod_extra?on_conflict=product_id',{
+    method:'POST',
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},
+    body:JSON.stringify([{product_id:p.id,cost:p.cost,price:p.price,vendor:ex2.vendor||'',disabled:ex2.disabled||false}])
+  }).catch(e=>console.warn('cost save failed',e));
   closeModal('prod-modal');renderProducts();renderInventory();
-  alert(p.name+' 已更新！');
+  showToast(p.name+' 已更新！');
 }
 function openProdDetail(id){
   const p=PRODS.find(x=>x.id===id);if(!p)return;
@@ -2222,6 +2240,12 @@ async function loadFromCloud(){
     // Prod extra
     extraRows.forEach(r=>{
       PROD_EXTRA[r.product_id]={vendor:r.vendor||'',disabled:r.disabled||false,leadOrders:Array.isArray(r.lead_orders)?r.lead_orders:(r.lead_orders?JSON.parse(r.lead_orders):[])};
+      // 從 Supabase 還原成本/售價
+      const p=PRODS.find(x=>x.id===r.product_id);
+      if(p){
+        if(r.cost!=null)p.cost=parseFloat(r.cost);
+        if(r.price!=null&&parseFloat(r.price)>0)p.price=parseFloat(r.price);
+      }
     });
 
     // Settings
@@ -2765,7 +2789,11 @@ function exportReport(){
 
 
 
+
+
 </script>
+
+
 
 
 

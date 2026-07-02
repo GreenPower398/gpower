@@ -609,6 +609,8 @@ th.r,td.r{text-align:right}
 
 
 
+
+
 const CAT_SUB_MAP = {"順勢": ["貼片", "居家用品", "凝膠"], "紅光": ["燈"], "電磁波": ["貼片"], "生理時鐘": ["眼鏡", "燈"], "低溫": ["冰袋"], "書": ["書", "卡"], "接地": ["床具", "配件", "襪子", "墊子", "工具", "布鞋", "鞋墊", "拖鞋"], "空氣清淨": ["Suvios"]};
 
 
@@ -1190,7 +1192,11 @@ function showToast(msg,type){
   t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);
 }
 function calcStock(id){
-  let s=(INV[id]||{}).manualStock||0;
+  const inv=INV[id]||{};
+  // 如果有盤點紀錄，直接用盤點數字，不再疊加
+  if(inv.manualStock!=null && inv.manualStock>=0) return inv.manualStock;
+  // 沒有盤點紀錄才從進銷貨計算
+  let s=0;
   PURCHASES.filter(p=>p.productId===id).forEach(p=>s+=p.qty);
   ORDERS.filter(o=>o.status==='已出貨').forEach(o=>(o.items||[]).forEach(it=>{
     const match=(it.prod&&it.prod.id===id)||(it.prodId===id)||(it.code===id);
@@ -1572,10 +1578,17 @@ function renderProducts(){
   const pSortMode=window._prodSortMode||'orig';
   if(pSortMode==='hot') filtProd.sort((a,b)=>getMonthlyAvgSales(b.id)-getMonthlyAvgSales(a.id));
   else filtProd.sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);
+  // 分類熱銷順序
+  const CAT_ORDER=['順勢','紅光','電磁波','生理時鐘','接地','空氣清淨','低溫','書'];
   filtProd.sort((a,b)=>{
     const da=a.disabled||((PROD_EXTRA[a.id]||{}).disabled)||false;
     const db=b.disabled||((PROD_EXTRA[b.id]||{}).disabled)||false;
-    if(da&&!db)return 1;if(!da&&db)return -1;return 0;
+    if(da&&!db)return 1;if(!da&&db)return -1;
+    // 同為停售或同為販售中，按分類順序排
+    const ca=CAT_ORDER.indexOf(a.cat),cb=CAT_ORDER.indexOf(b.cat);
+    if(ca!==cb)return(ca<0?99:ca)-(cb<0?99:cb);
+    // 同分類按品號
+    return a.id<b.id?-1:a.id>b.id?1:0;
   });
   const tbody=filtProd.slice(0,300).map(p=>{
     const ex=PROD_EXTRA[p.id]||{};
@@ -2750,7 +2763,11 @@ function exportReport(){
 
 
 
+
+
 </script>
+
+
 
 
 

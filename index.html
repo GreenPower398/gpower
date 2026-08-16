@@ -660,6 +660,8 @@ th.r,td.r{text-align:right}
 
 
 
+
+
 const CAT_SUB_MAP = {"順勢": ["貼片", "居家用品", "凝膠"], "紅光": ["燈"], "電磁波": ["貼片"], "生理時鐘": ["眼鏡", "燈"], "低溫": ["冰袋"], "書": ["書", "卡"], "接地": ["床具", "配件", "襪子", "墊子", "工具", "布鞋", "鞋墊", "拖鞋"], "空氣清淨": ["Suvios"]};
 
 
@@ -1126,9 +1128,9 @@ function loadOrders(){
 function saveInv(){
   try{
     localStorage.setItem('gpower_inv',JSON.stringify(INV));
-    const rows=Object.entries(INV).map(([id,v])=>({product_id:id,manual_stock:v.manualStock||0,safe_stock:v.safeStock||5}));
+    const rows=Object.entries(INV).map(([id,v])=>({product_id:id,manual_stock:v.manualStock!=null?v.manualStock:null,safe_stock:v.safeStock||5,stock_date:v.stockDate||null}));
     supaWrite('inventory',rows,'product_id');
-    alert('庫存設定已儲存！');
+    showToast('庫存設定已儲存！');
   }catch(e){alert('儲存失敗');}
 }
 function loadInv(){try{const d=localStorage.getItem('gpower_inv');if(d)INV=JSON.parse(d);}catch(e){}}
@@ -1171,7 +1173,11 @@ function matchByKw(name){
 function getMonths(){return[...new Set(ORDERS.map(o=>o.date?o.date.slice(0,7):'').filter(Boolean))].sort();}
 function getOrds(mf,sf,df,dt){
   let o=[...ORDERS];
-  o=o.filter(x=>x.status!=='退貨'&&x.status!=='取消'&&x.status!=='已取消'&&x.status!=='部分退貨');
+  // 過濾退貨/取消（所有可能的寫法）
+  o=o.filter(x=>{
+    const s=x.status||'';
+    return !s.includes('退貨')&&!s.includes('取消')&&s!=='已取消'&&s!=='部分退貨';
+  });
   if(mf) o=o.filter(x=>x.date&&x.date.startsWith(mf));
   if(df) o=o.filter(x=>x.date&&x.date>=df);
   if(dt) o=o.filter(x=>x.date&&x.date<=dt);
@@ -1267,6 +1273,7 @@ function renderOrders(){
     const itTxt=(o.items||[]).slice(0,3).map(it=>it.name+(it.qty>1?' x'+it.qty:'')).join('、')+(o.items&&o.items.length>3?'…':'');
     return '<tr class="tr-click" data-oid="'+o.id+'">'
       +'<td style="font-size:10px">'+o.date+'</td>'
+      +'<td style="font-size:9px;color:var(--tx3)">'+o.id+'</td>'
       +'<td>'+(o.customer||'—')+'</td>'
       +'<td style="font-size:11px;max-width:220px">'+itTxt+(o.note?'<div style="font-size:9px;color:var(--tx3)">📝'+o.note+'</div>':'')+'</td>'
       +'<td class="r">'+fmt(o.actual)+'</td>'
@@ -2922,7 +2929,11 @@ function exportReport(){
 
 
 
+
+
 </script>
+
+
 
 
 

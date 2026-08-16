@@ -285,21 +285,6 @@ th.r,td.r{text-align:right}
     
 
 
-    <!-- 本月銷售分析 -->
-    <div class="card" style="margin-top:10px">
-      <div class="card-hd">
-        <div class="card-title">本月銷售分析</div>
-      </div>
-      <div class="content" style="padding:12px">
-        <div class="chart-row" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-          <div class="card"><div class="card-hd"><div class="card-title">💳 付款方式</div></div><div id="ov-ana-pay" style="padding:0 4px 8px"></div></div>
-          <div class="card"><div class="card-hd"><div class="card-title">📦 寄送方式</div></div><div id="ov-ana-ship" style="padding:0 4px 8px"></div></div>
-          <div class="card"><div class="card-hd"><div class="card-title">👤 員工業績</div></div><div id="ov-ana-staff" style="padding:0 4px 8px"></div></div>
-          <div class="card"><div class="card-hd"><div class="card-title">🛒 銷售管道</div></div><div id="ov-ana-channel" style="padding:0 4px 8px"></div></div>
-        </div>
-      </div>
-    </div>
-
 
 <!-- 銷貨 -->
 <div id="pg-sales" class="pg">
@@ -651,6 +636,7 @@ th.r,td.r{text-align:right}
 
 <!-- DATA + LOGIC -->
 <script>
+
 
 
 
@@ -1312,35 +1298,7 @@ function renderOrders(){
   if(wrap)wrap.innerHTML='<table id="orders-tbl"><thead><tr><th>日期</th><th>客戶</th><th>品項</th><th class="r">金額</th><th>狀態</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table>';
 }
 
-function renderOvAnalysis(){
-  const{mf,df,dt}=getOvParams(),sf='';
-  const{rev,ords}=calcStats(mf,sf,df,dt);
-  if(!ords||!ords.length)return;
-  function mkOvTable(id,rows,hdrs){
-    const el=$el(id);if(!el)return;
-    const total=rows.reduce((s,r)=>s+(parseFloat(r[1])||0),0)||1;
-    el.innerHTML='<table style="width:100%;font-size:11px"><thead><tr>'+hdrs.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+
-      rows.map(r=>'<tr>'+r.map((v,i)=>'<td'+(i>0?' class="r"':'')+'>'+v+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
-  }
-  // Payment
-  const pm={};ords.forEach(o=>{const p=o.payment||'其他';if(!pm[p])pm[p]=0;pm[p]+=o.actual;});
-  mkOvTable('ov-ana-pay',Object.entries(pm).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,fmt(v),(v/rev*100).toFixed(0)+'%']),['付款','金額','佔比']);
-  // Ship
-  const sm={};ords.forEach(o=>{const s=o.ship||'其他';if(!sm[s])sm[s]=0;sm[s]+=o.actual;});
-  mkOvTable('ov-ana-ship',Object.entries(sm).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,fmt(v),(v/rev*100).toFixed(0)+'%']),['寄送','金額','佔比']);
-  // Staff
-  const stm={};ords.forEach(o=>{const s=o.staff||'未指定';if(s==='未指定')return;if(!stm[s])stm[s]=0;stm[s]+=o.actual;});
-  mkOvTable('ov-ana-staff',Object.entries(stm).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,fmt(v)]),['員工','業績']);
-  // Channel
-  const cm={網路:0,現場:0,其他:0};
-  ords.forEach(o=>{
-    const ch=(o.channel||'').toLowerCase(),cu=(o.customer||'').toLowerCase(),id=(o.id||'');
-    if(ch.includes('官網')||ch.includes('網路')||ch.includes('網站')||cu.includes('網站')||cu.includes('官網')||id.startsWith('O')){cm['網路']+=o.actual;}
-    else if(ch.includes('現場')||cu.includes('現場')||id.startsWith('M')){cm['現場']+=o.actual;}
-    else{cm['其他']+=o.actual;}
-  });
-  mkOvTable('ov-ana-channel',Object.entries(cm).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,fmt(v),(v/rev*100).toFixed(0)+'%']),['管道','金額','佔比']);
-}
+
 function calcStock(id){
   const inv=INV[id]||{};
   if(inv.manualStock!=null&&inv.manualStock>=0){
@@ -1584,7 +1542,6 @@ function renderOverview(){
   }
 
 
-  renderOvAnalysis();
 }
 function renderBars(id,entries,key){
   const el=$el(id);if(!el)return;
@@ -2997,7 +2954,9 @@ function exportReport(){
 
 
 
+
 </script>
+
 
 
 

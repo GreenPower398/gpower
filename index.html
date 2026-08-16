@@ -232,7 +232,6 @@ th.r,td.r{text-align:right}
   <div class="nav on" id="nav-overview"><span>🏠</span>總覽</div>
   <div class="sb-sec">銷售</div>
   <div class="nav" id="nav-sales"><span>🧾</span>銷貨</div>
-  <div class="nav" id="nav-analysis"><span>📊</span>銷售分析</div>
   <div class="nav" id="nav-orders"><span>📋</span>訂單明細</div>
   <div class="nav" id="nav-analysis"><span>📈</span>銷售分析</div>
   <div class="sb-sec">進銷存</div>
@@ -344,7 +343,7 @@ th.r,td.r{text-align:right}
 </div>
 
 <!-- 銷售分析 -->
-<div id="pg-analysis" class="pg">
+<div id="pg-analysis" class="pg" style="display:none!important">
   <div class="topbar">
     <div><div class="tb-title">銷售分析</div><div class="tb-sub" id="ana-period">—</div></div>
     <div class="rf">
@@ -635,7 +634,76 @@ th.r,td.r{text-align:right}
 </div>
 
 <!-- DATA + LOGIC -->
+    <div id="ov-analysis-anchor" style="margin-top:20px">
+<div>
+  <div class="topbar">
+    <div><div class="tb-title">銷售分析</div><div class="tb-sub" id="ana-period">—</div></div>
+    <div class="rf">
+      <select class="fis" id="ana-month" style="width:118px"><option value="">全部期間</option></select>
+      <div style="display:flex;align-items:center;gap:5px">
+        <input class="fis" type="date" id="ana-date-from" style="width:128px">
+        <span style="font-size:11px;color:var(--tx2)">～</span>
+        <input class="fis" type="date" id="ana-date-to" style="width:128px">
+        <button class="btn btn-sm" id="btn-export-report" style="background:var(--pur);white-space:nowrap">📊 下載報告</button>
+    </div>
+      
+    </div>
+  </div>
+  <div class="content">
+    <div class="stats s4" style="margin-bottom:12px">
+      <div class="sc"><div class="sc-lbl">銷售額</div><div class="sc-val cg" id="ana-rev">—</div></div>
+      <div class="sc"><div class="sc-lbl">估算毛利</div><div class="sc-val ca" id="ana-profit">—</div><div class="sc-sub" id="ana-mg-sub"></div></div>
+      <div class="sc"><div class="sc-lbl">訂單數</div><div class="sc-val" id="ana-orders">—</div></div>
+      <div class="sc"><div class="sc-lbl">平均客單價</div><div class="sc-val cy" id="ana-avg">—</div></div>
+    </div>
+    <!-- Row 1: pie charts -->
+    <div class="chart-row" style="margin-bottom:14px">
+      <div class="card">
+        <div class="card-hd"><div class="card-title">📊 分類銷售額</div><div class="bdg" style="font-size:9px">點圖看明細</div></div>
+        <div style="padding:12px">
+          <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+            <svg id="ana-cat-pie" viewBox="0 0 200 200" style="width:140px;height:140px;flex-shrink:0;cursor:pointer"></svg>
+            <div id="ana-cat-legend" style="flex:1;min-width:100px"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">🏆 熱銷品項</div><div class="bdg" style="font-size:9px">點圖看明細</div></div>
+        <div style="padding:12px">
+          <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+            <svg id="ana-sku-pie" viewBox="0 0 200 200" style="width:140px;height:140px;flex-shrink:0;cursor:pointer"></svg>
+            <div id="ana-sku-legend" style="flex:1;min-width:100px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Detail panel -->
+    <div id="ana-detail-panel" style="display:none;margin-bottom:14px">
+      <div class="card">
+        <div class="card-hd"><div class="card-title" id="ana-detail-title">詳細分析</div><button class="btn btn-sm btn-out" id="btn-close-detail">✕ 關閉</button></div>
+        <div id="ana-detail-body" style="padding:14px"></div>
+      </div>
+    </div>
+    <!-- Daily trend -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-hd"><div class="card-title">📈 每日銷售額趨勢</div></div>
+      <div style="padding:14px"><svg id="daily-svg" style="width:100%;height:130px"></svg></div>
+    </div>
+    <!-- Pay + Ship -->
+    <div class="chart-row" style="margin-bottom:14px">
+      <div class="card"><div class="card-hd"><div class="card-title">💳 付款方式</div></div><div id="ana-pay" style="padding:0 4px 8px"></div></div>
+      <div class="card"><div class="card-hd"><div class="card-title">🚚 寄送方式</div></div><div id="ana-ship" style="padding:0 4px 8px"></div></div>
+    </div>
+    <!-- City + Staff -->
+    <div class="chart-row">
+      <div class="card"><div class="card-hd"><div class="card-title">🗺 縣市統計</div></div><div id="ana-city" style="padding:0 4px 8px"></div></div>
+      <div class="card"><div class="card-hd"><div class="card-title">👤 員工業績</div></div><div id="ana-staff" style="padding:0 4px 8px"></div></div>
+      <div class="card"><div class="card-hd"><div class="card-title">🛒 銷售管道</div></div><div id="ana-channel" style="padding:0 4px 8px"></div></div>
+    </div>
+  </div>
+    </div>
 <script>
+
 
 
 
@@ -2560,8 +2628,19 @@ function init(){
     });
   });
 
+  // nav-analysis → scroll to analysis in overview
+  const navAna=$el('nav-analysis');
+  if(navAna)navAna.addEventListener('click',function(){
+    go('overview');
+    setTimeout(()=>{
+      renderAnalysis();
+      const anchor=$el('ov-analysis-anchor');
+      if(anchor)anchor.scrollIntoView({behavior:'smooth'});
+    },100);
+  });
+
   // Nav
-  ['overview','sales','orders','analysis','products','purchase','inventory','stocktake','settings'].forEach(page=>{
+  ['overview','sales','orders','products','purchase','inventory','stocktake','settings'].forEach(page=>{
     const nav=$el('nav-'+page);if(nav)nav.addEventListener('click',()=>go(page));
   });
 
@@ -2955,7 +3034,9 @@ function exportReport(){
 
 
 
+
 </script>
+
 
 
 

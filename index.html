@@ -232,6 +232,7 @@ th.r,td.r{text-align:right}
   <div class="nav on" id="nav-overview"><span>🏠</span>總覽</div>
   <div class="sb-sec">銷售</div>
   <div class="nav" id="nav-sales"><span>🧾</span>銷貨</div>
+  <div class="nav" id="nav-analysis"><span>📊</span>銷售分析</div>
   <div class="nav" id="nav-orders"><span>📋</span>訂單明細</div>
   <div class="nav" id="nav-analysis"><span>📈</span>銷售分析</div>
   <div class="sb-sec">進銷存</div>
@@ -281,62 +282,22 @@ th.r,td.r{text-align:right}
     </div>
 </div>
 
-    <!-- 銷售分析區（合併到總覽）-->
-    <div style="margin-top:16px">
-      <div class="card-hd" style="padding:10px 0 6px"><div class="card-title">📊 銷售分析</div></div>
-<div class="content">
-    <div class="stats s4" style="margin-bottom:12px">
-      <div class="sc"><div class="sc-lbl">銷售額</div><div class="sc-val cg" id="ana-rev">—</div></div>
-      <div class="sc"><div class="sc-lbl">估算毛利</div><div class="sc-val ca" id="ana-profit">—</div><div class="sc-sub" id="ana-mg-sub"></div></div>
-      <div class="sc"><div class="sc-lbl">訂單數</div><div class="sc-val" id="ana-orders">—</div></div>
-      <div class="sc"><div class="sc-lbl">平均客單價</div><div class="sc-val cy" id="ana-avg">—</div></div>
-    </div>
-    <!-- Row 1: pie charts -->
-    <div class="chart-row" style="margin-bottom:14px">
-      <div class="card">
-        <div class="card-hd"><div class="card-title">📊 分類銷售額</div><div class="bdg" style="font-size:9px">點圖看明細</div></div>
-        <div style="padding:12px">
-          <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-            <svg id="ana-cat-pie" viewBox="0 0 200 200" style="width:140px;height:140px;flex-shrink:0;cursor:pointer"></svg>
-            <div id="ana-cat-legend" style="flex:1;min-width:100px"></div>
-          </div>
+    
+
+
+    <!-- 本月銷售分析 -->
+    <div class="card" style="margin-top:10px">
+      <div class="card-hd">
+        <div class="card-title">本月銷售分析</div>
+      </div>
+      <div class="content" style="padding:12px">
+        <div class="chart-row" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div class="card"><div class="card-hd"><div class="card-title">💳 付款方式</div></div><div id="ov-ana-pay" style="padding:0 4px 8px"></div></div>
+          <div class="card"><div class="card-hd"><div class="card-title">📦 寄送方式</div></div><div id="ov-ana-ship" style="padding:0 4px 8px"></div></div>
+          <div class="card"><div class="card-hd"><div class="card-title">👤 員工業績</div></div><div id="ov-ana-staff" style="padding:0 4px 8px"></div></div>
+          <div class="card"><div class="card-hd"><div class="card-title">🛒 銷售管道</div></div><div id="ov-ana-channel" style="padding:0 4px 8px"></div></div>
         </div>
       </div>
-      <div class="card">
-        <div class="card-hd"><div class="card-title">🏆 熱銷品項</div><div class="bdg" style="font-size:9px">點圖看明細</div></div>
-        <div style="padding:12px">
-          <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-            <svg id="ana-sku-pie" viewBox="0 0 200 200" style="width:140px;height:140px;flex-shrink:0;cursor:pointer"></svg>
-            <div id="ana-sku-legend" style="flex:1;min-width:100px"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- Detail panel -->
-    <div id="ana-detail-panel" style="display:none;margin-bottom:14px">
-      <div class="card">
-        <div class="card-hd"><div class="card-title" id="ana-detail-title">詳細分析</div><button class="btn btn-sm btn-out" id="btn-close-detail">✕ 關閉</button></div>
-        <div id="ana-detail-body" style="padding:14px"></div>
-      </div>
-    </div>
-    <!-- Daily trend -->
-    <div class="card" style="margin-bottom:14px">
-      <div class="card-hd"><div class="card-title">📈 每日銷售額趨勢</div></div>
-      <div style="padding:14px"><svg id="daily-svg" style="width:100%;height:130px"></svg></div>
-    </div>
-    <!-- Pay + Ship -->
-    <div class="chart-row" style="margin-bottom:14px">
-      <div class="card"><div class="card-hd"><div class="card-title">💳 付款方式</div></div><div id="ana-pay" style="padding:0 4px 8px"></div></div>
-      <div class="card"><div class="card-hd"><div class="card-title">🚚 寄送方式</div></div><div id="ana-ship" style="padding:0 4px 8px"></div></div>
-    </div>
-    <!-- City + Staff -->
-    <div class="chart-row">
-      <div class="card"><div class="card-hd"><div class="card-title">🗺 縣市統計</div></div><div id="ana-city" style="padding:0 4px 8px"></div></div>
-      <div class="card"><div class="card-hd"><div class="card-title">👤 員工業績</div></div><div id="ana-staff" style="padding:0 4px 8px"></div></div>
-      <div class="card"><div class="card-hd"><div class="card-title">🛒 銷售管道</div></div><div id="ana-channel" style="padding:0 4px 8px"></div></div>
-    </div>
-  </div>
-</div>
     </div>
 
 
@@ -398,7 +359,7 @@ th.r,td.r{text-align:right}
 </div>
 
 <!-- 銷售分析 -->
-<div id="pg-analysis" class="pg" style="display:none">
+<div id="pg-analysis" class="pg">
   <div class="topbar">
     <div><div class="tb-title">銷售分析</div><div class="tb-sub" id="ana-period">—</div></div>
     <div class="rf">
@@ -690,6 +651,7 @@ th.r,td.r{text-align:right}
 
 <!-- DATA + LOGIC -->
 <script>
+
 
 
 
@@ -1349,6 +1311,36 @@ function renderOrders(){
   const wrap=document.getElementById('orders-table-wrap');
   if(wrap)wrap.innerHTML='<table id="orders-tbl"><thead><tr><th>日期</th><th>客戶</th><th>品項</th><th class="r">金額</th><th>狀態</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table>';
 }
+
+function renderOvAnalysis(){
+  const{mf,df,dt}=getOvParams(),sf='';
+  const{rev,ords}=calcStats(mf,sf,df,dt);
+  if(!ords||!ords.length)return;
+  function mkOvTable(id,rows,hdrs){
+    const el=$el(id);if(!el)return;
+    const total=rows.reduce((s,r)=>s+(parseFloat(r[1])||0),0)||1;
+    el.innerHTML='<table style="width:100%;font-size:11px"><thead><tr>'+hdrs.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+
+      rows.map(r=>'<tr>'+r.map((v,i)=>'<td'+(i>0?' class="r"':'')+'>'+v+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
+  }
+  // Payment
+  const pm={};ords.forEach(o=>{const p=o.payment||'其他';if(!pm[p])pm[p]=0;pm[p]+=o.actual;});
+  mkOvTable('ov-ana-pay',Object.entries(pm).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,fmt(v),(v/rev*100).toFixed(0)+'%']),['付款','金額','佔比']);
+  // Ship
+  const sm={};ords.forEach(o=>{const s=o.ship||'其他';if(!sm[s])sm[s]=0;sm[s]+=o.actual;});
+  mkOvTable('ov-ana-ship',Object.entries(sm).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,fmt(v),(v/rev*100).toFixed(0)+'%']),['寄送','金額','佔比']);
+  // Staff
+  const stm={};ords.forEach(o=>{const s=o.staff||'未指定';if(s==='未指定')return;if(!stm[s])stm[s]=0;stm[s]+=o.actual;});
+  mkOvTable('ov-ana-staff',Object.entries(stm).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,fmt(v)]),['員工','業績']);
+  // Channel
+  const cm={網路:0,現場:0,其他:0};
+  ords.forEach(o=>{
+    const ch=(o.channel||'').toLowerCase(),cu=(o.customer||'').toLowerCase(),id=(o.id||'');
+    if(ch.includes('官網')||ch.includes('網路')||ch.includes('網站')||cu.includes('網站')||cu.includes('官網')||id.startsWith('O')){cm['網路']+=o.actual;}
+    else if(ch.includes('現場')||cu.includes('現場')||id.startsWith('M')){cm['現場']+=o.actual;}
+    else{cm['其他']+=o.actual;}
+  });
+  mkOvTable('ov-ana-channel',Object.entries(cm).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,fmt(v),(v/rev*100).toFixed(0)+'%']),['管道','金額','佔比']);
+}
 function calcStock(id){
   const inv=INV[id]||{};
   if(inv.manualStock!=null&&inv.manualStock>=0){
@@ -1591,6 +1583,8 @@ function renderOverview(){
     ml.style.display='flex';ml.style.gap=_gap+'px';
   }
 
+
+  renderOvAnalysis();
 }
 function renderBars(id,entries,key){
   const el=$el(id);if(!el)return;
@@ -3002,7 +2996,9 @@ function exportReport(){
 
 
 
+
 </script>
+
 
 
 

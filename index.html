@@ -676,6 +676,8 @@ th.r,td.r{text-align:right}
 
 
 
+
+
 const CAT_SUB_MAP = {"順勢": ["貼片", "居家用品", "凝膠"], "紅光": ["燈"], "電磁波": ["貼片"], "生理時鐘": ["眼鏡", "燈"], "低溫": ["冰袋"], "書": ["書", "卡"], "接地": ["床具", "配件", "襪子", "墊子", "工具", "布鞋", "鞋墊", "拖鞋"], "空氣清淨": ["Suvios"]};
 
 
@@ -2383,7 +2385,7 @@ async function loadFromCloud(){
     }
 
     // Inventory
-    invRows.forEach(r=>{INV[r.product_id]={manualStock:parseInt(r.manual_stock)||0,safeStock:parseInt(r.safe_stock)||5};});
+    invRows.forEach(r=>{INV[r.product_id]={manualStock:r.manual_stock!=null?parseFloat(r.manual_stock):null,safeStock:parseInt(r.safe_stock)||5,stockDate:r.stock_date||null};});
 
     // Prod extra
     extraRows.forEach(r=>{
@@ -2427,8 +2429,6 @@ async function loadFromCloud(){
   }
 }
 
-// ══ Settings ══// ══ State ══
-// ══ Settings ══
 function renderSettingsPage(){
   renderSettingList('staff-list','STAFF');renderSettingList('vendors-list','VENDORS');
   renderSettingList('categories-list','CATEGORIES');renderSettingList('channels-list','CHANNELS');
@@ -2975,7 +2975,11 @@ function exportReport(){
 
 
 
+
+
 </script>
+
+
 
 
 

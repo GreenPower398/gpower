@@ -635,6 +635,7 @@ th.r,td.r{text-align:right}
 
 <!-- DATA + LOGIC --><script>
 
+
 const HIST_NAME_MAP={
   // 舊網站商品編號 → 新品號
   "短效活力貼":"HP01001","長效活力貼":"HP02001","隱形款活力貼":"HP03001",
@@ -2326,11 +2327,39 @@ function parseFileHTML(text,filename){
     const actual=parseFloat(row['訂單實際金額'])||0;
     const totalSub=qtys.reduce((s,q,j)=>s+(parseInt(q)||0)*(parseFloat(prices[j])||0),0)||1;
     const ratio=actual/totalSub;
+    const colors=row['顏色']?(row['顏色'].split('\n').map(s=>s.trim())):[]; 
+    const sizes=row['尺寸']?(row['尺寸'].split('\n').map(s=>s.trim())):[]; 
     const items=codes.map((code,j)=>{
       const qty=parseInt(qtys[j])||1,price=parseFloat(prices[j])||0;
       const name=names[j]||code,sub=qty*price;
-      const prod=matchByKw(code)||matchByKw(name);
-      return{name,code,qty,price,sub,actualSub:Math.round(sub*ratio),prod};
+      const color=(colors[j]||'').replace(/free/gi,'').trim();
+      const size=(sizes[j]||'').replace(/free/gi,'').trim();
+      // 嘗試用商品編號+顏色+尺寸自動組合品號
+      let prod=null;
+      if(size||color){
+        // 先從 HIST_NAME_MAP 找基礎品號
+        const baseId=HIST_NAME_MAP[code]||HIST_NAME_MAP[name];
+        if(baseId){
+          // 嘗試組合完整品號（顏色縮寫+尺寸）
+          const sizeNum=size.replace(/[^0-9\/]/g,'');
+          // 直接查 PRODS 找到品號前綴相同且名稱包含顏色和尺寸的
+          const base3=baseId.slice(0,5); // 前5碼如 GL032
+          const candidates=PRODS.filter(p=>p.id.startsWith(base3));
+          if(candidates.length>0&&sizeNum){
+            // 找名稱包含尺寸的
+            prod=candidates.find(p=>{
+              const pid=p.id;
+              return pid.endsWith(sizeNum.replace('/',''))||pid.endsWith(sizeNum.split('/')[0]);
+            })||candidates.find(p=>p.name&&p.name.includes(sizeNum))||candidates[0];
+          } else if(candidates.length>0){
+            prod=candidates[0];
+          }
+        }
+      }
+      // 如果尺寸比對失敗，用一般方式
+      if(!prod) prod=matchByKw(code)||matchByKw(name);
+      const prodId=prod?prod.id:null;
+      return{name,code,qty,price,sub,actualSub:Math.round(sub*ratio),prod,prodId};
     });
     ORDERS.push({id:row['訂單編號'],date:row['下單日期'],customer:row['訂購人姓名'],status:row['訂單狀態'],actual,payment:row['付款方式'],ship:row['出貨方式'],address:row['收件人地址'],channel:'官網下單',items,filename});
     added++;
@@ -3038,7 +3067,9 @@ function exportReport(){
 
 
 
+
 </script>
+
 
 
 

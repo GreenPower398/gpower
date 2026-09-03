@@ -636,6 +636,7 @@ th.r,td.r{text-align:right}
 <!-- DATA + LOGIC --><script>
 
 
+
 const HIST_NAME_MAP={
   // 舊網站商品編號 → 新品號
   "短效活力貼":"HP01001","長效活力貼":"HP02001","隱形款活力貼":"HP03001",
@@ -1264,16 +1265,22 @@ function getItems(mf,sf,df,dt){return getOrds(mf,sf,df,dt).flatMap(o=>(o.items||
 function calcStats(mf,sf,df,dt){
   const ords=getOrds(mf,sf,df,dt),items=getItems(mf,sf,df,dt);
   const rev=ords.reduce((s,o)=>s+o.actual,0);
+  // 折扣（coupon+回饋金+購物金）
+  const totalDiscount=ords.reduce((s,o)=>s+(o.discount||0),0);
+  // 成本（含5%進項稅）
+  const TAX_RATE=0.05;
   let cost=0;
   items.forEach(it=>{
     const prodId=it.prodId||(it.prod&&it.prod.id)||null;
     const prod=prodId?PRODS.find(p=>p.id===prodId):it.prod;
     const unitCost=prod&&prod.cost!=null?prod.cost:null;
-    if(unitCost!=null){cost+=unitCost*(it.qty||0);}
+    if(unitCost!=null){cost+=unitCost*(1+TAX_RATE)*(it.qty||0);}
     else{cost+=(it.actualSub||it.sub||0)*0.4;}
   });
-  const profit=rev-cost,margin=rev>0?profit/rev*100:0;
-  return{rev,profit,margin,nOrds:ords.length,items,ords};
+  // 毛利 = 實際收款 - 折扣 - 含稅成本
+  const profit=rev-totalDiscount-cost;
+  const margin=rev>0?profit/rev*100:0;
+  return{rev,profit,margin,nOrds:ords.length,items,ords,totalDiscount,cost};
 }
 function getOvParams(){return{mf:$v('ov-month'),df:$v('ov-date-from'),dt:$v('ov-date-to')};}
 function getAnaParams(){return{mf:$v('ana-month'),sf:'',df:$v('ana-date-from'),dt:$v('ana-date-to')};}
@@ -2361,7 +2368,8 @@ function parseFileHTML(text,filename){
       const prodId=prod?prod.id:null;
       return{name,code,qty,price,sub,actualSub:Math.round(sub*ratio),prod,prodId};
     });
-    ORDERS.push({id:row['訂單編號'],date:row['下單日期'],customer:row['訂購人姓名'],status:row['訂單狀態'],actual,payment:row['付款方式'],ship:row['出貨方式'],address:row['收件人地址'],channel:'官網下單',items,filename});
+    const discount=parseFloat(row['coupon']||0)+parseFloat(row['回饋金']||0)+parseFloat(row['購物金']||0);
+    ORDERS.push({id:row['訂單編號'],date:row['下單日期'],customer:row['訂購人姓名'],status:row['訂單狀態'],actual,payment:row['付款方式'],ship:row['出貨方式'],address:row['收件人地址'],channel:'官網下單',note:row['客戶備註']||'',discount,items,filename});
     added++;
   }
   return added;
@@ -3068,7 +3076,9 @@ function exportReport(){
 
 
 
+
 </script>
+
 
 
 

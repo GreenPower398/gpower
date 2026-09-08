@@ -233,7 +233,7 @@ th.r,td.r{text-align:right}
   <div class="sb-sec">銷售</div>
   <div class="nav" id="nav-sales"><span>🧾</span>銷貨</div>
   <div class="nav" id="nav-orders"><span>📋</span>訂單明細</div>
-  <div class="nav" id="nav-analysis"><span>📈</span>銷售分析</div>
+  <div class="nav" id="nav-analysis" onclick="go('overview')" style="cursor:pointer"><span>📊</span>銷售分析</div>
   <div class="sb-sec">進銷存</div>
   <div class="nav" id="nav-products"><span>📦</span>商品總覽</div>
   <div class="nav" id="nav-purchase"><span>🚚</span>進貨</div>
@@ -259,27 +259,90 @@ th.r,td.r{text-align:right}
     </div>
   </div>
   <div class="content">
+    <!-- KPI 卡片 -->
     <div class="stats s4">
-      <div class="sc"><div class="sc-lbl">接單金額</div><div class="sc-val cg" id="ov-rev">—</div><div class="sc-sub">訂單實際金額合計</div></div>
-      <div class="sc"><div class="sc-lbl">估算毛利</div><div class="sc-val ca" id="ov-profit">—</div><div class="sc-sub" id="ov-mg-sub">毛利率 —%</div></div>
+      <div class="sc"><div class="sc-lbl">接單金額</div><div class="sc-val cg" id="ov-rev" style="cursor:pointer" onclick="go('orders')" title="點擊查看訂單明細">—</div><div class="sc-sub">訂單實際金額合計</div></div>
+      <div class="sc"><div class="sc-lbl">估算毛利</div><div class="sc-val ca" id="ov-profit" style="cursor:pointer" onclick="go('analysis')" title="點擊查看毛利分析">—</div><div class="sc-sub" id="ov-mg-sub">毛利率 —%</div></div>
       <div class="sc"><div class="sc-lbl">訂單數</div><div class="sc-val" id="ov-orders">—</div></div>
       <div class="sc"><div class="sc-lbl">平均客單價</div><div class="sc-val cy" id="ov-avg">—</div></div>
     </div>
-    <div class="chart-row">
-      <div class="chart-card"><div class="chart-title">各分類銷售額</div><div id="ov-cat-chart"></div></div>
-      <div class="chart-card"><div class="chart-title">熱銷品項 Top 8（件數）</div><div id="ov-top-chart"></div></div>
+
+    <!-- 分類圓餅 + 熱銷 -->
+    <div class="chart-row" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div class="card">
+        <div class="card-hd"><div class="card-title">各分類銷售額</div><div class="bdg" id="ov-cat-bdg"></div></div>
+        <div style="padding:10px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <canvas id="ov-cat-pie" width="120" height="120" style="flex-shrink:0"></canvas>
+          <div id="ov-cat-legend" style="flex:1;min-width:120px;font-size:11px"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">熱銷品項 TOP 10（件數）</div></div>
+        <div id="ov-top-bars" style="padding:8px 12px"></div>
+      </div>
     </div>
-    <div class="card">
-      <div class="card-hd"><div class="card-title">月營業額趨勢</div><div style="display:flex;gap:5px;align-items:center"><div class="bdg" id="ov-month-bdg" style="margin-right:4px"></div><div id="trend-controls" style="display:flex;gap:4px;align-items:center"><button id="btn-trend-all" onclick="window._trendMode='all';window._trendYear=null;renderOverview();" style="font-size:9px;padding:2px 7px;border-radius:4px;border:1px solid var(--bdr);cursor:pointer;font-family:inherit">全部</button><div style="display:flex;align-items:center;gap:2px"><button id="btn-trend-year" onclick="window._trendMode='year';renderOverview();" style="font-size:9px;padding:2px 7px;border-radius:4px;border:1px solid var(--bdr);cursor:pointer;font-family:inherit">年份</button><select id="trend-year-sel" style="display:none;font-size:9px;padding:2px 4px;border-radius:4px;border:1px solid var(--bdr);background:var(--sur2);color:var(--tx);font-family:inherit;cursor:pointer" onchange="window._trendYear=this.value;renderOverview()"></select></div><div style="display:flex;align-items:center;gap:2px"><button id="btn-trend-compare" onclick="window._trendMode='compare';renderOverview();" style="font-size:9px;padding:2px 7px;border-radius:4px;border:1px solid var(--bdr);cursor:pointer;font-family:inherit">月比較</button><select id="trend-month-sel" style="display:none;font-size:9px;padding:2px 4px;border-radius:4px;border:1px solid var(--bdr);background:var(--sur2);color:var(--tx);font-family:inherit;cursor:pointer" onchange="window._trendMonth=this.value;renderOverview()"><option value="01">1月</option><option value="02">2月</option><option value="03">3月</option><option value="04">4月</option><option value="05">5月</option><option value="06">6月</option><option value="07">7月</option><option value="08">8月</option><option value="09">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option></select></div></div></div></div>
-      <div style="padding:14px 15px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch"><div id="ov-month-chart" class="month-chart" style="white-space:nowrap"></div><div id="ov-month-labels" style="display:flex;gap:4px;padding:0 2px;margin-top:3px"></div></div>
+
+    <!-- 每日銷售趨勢 -->
+    <div class="card" style="margin-top:10px">
+      <div class="card-hd">
+        <div class="card-title">每日銷售趨勢</div>
+        <div class="bdg" id="ov-daily-bdg"></div>
+      </div>
+      <div style="padding:10px 12px 6px;overflow-x:auto">
+        <canvas id="ov-daily-chart" height="80"></canvas>
+      </div>
     </div>
-  </div>
-    <!-- 毛利趨勢圖 -->
+
+    <!-- 縣市 + 付款 + 寄送 + 管道 -->
+    <div class="chart-row" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div class="card"><div class="card-hd"><div class="card-title">📍 縣市統計</div></div><div id="ana-city" style="padding:0 4px 8px"></div></div>
+      <div class="card"><div class="card-hd"><div class="card-title">💳 付款方式</div></div><div id="ana-pay" style="padding:0 4px 8px"></div></div>
+      <div class="card"><div class="card-hd"><div class="card-title">📦 寄送方式</div></div><div id="ana-ship" style="padding:0 4px 8px"></div></div>
+      <div class="card"><div class="card-hd"><div class="card-title">🛒 銷售管道</div></div><div id="ana-channel" style="padding:0 4px 8px"></div></div>
+    </div>
+
+    <!-- 員工業績 -->
+    <div class="card" style="margin-top:10px">
+      <div class="card-hd"><div class="card-title">👤 員工業績</div></div>
+      <div id="ana-staff" style="padding:0 4px 8px"></div>
+    </div>
+
+    <!-- 月營業額趨勢 -->
+    <div class="card" style="margin-top:10px">
+      <div class="card-hd">
+        <div class="card-title">月營業額趨勢</div>
+        <div style="display:flex;gap:5px;align-items:center">
+          <div class="bdg" id="ov-month-bdg" style="margin-right:4px"></div>
+          <div id="trend-controls" style="display:flex;gap:4px;align-items:center">
+            <button id="btn-trend-all" onclick="window._trendMode='all';window._trendYear=null;renderOverview();" style="font-size:9px;padding:2px 7px;border-radius:4px;border:1px solid var(--bdr);cursor:pointer;font-family:inherit">全部</button>
+            <div style="display:flex;align-items:center;gap:2px">
+              <button id="btn-trend-year" onclick="window._trendMode='year';renderOverview();" style="font-size:9px;padding:2px 7px;border-radius:4px;border:1px solid var(--bdr);cursor:pointer;font-family:inherit">年份</button>
+              <select id="trend-year-sel" style="display:none;font-size:9px;padding:2px 4px;border-radius:4px;border:1px solid var(--bdr);background:var(--sur2);color:var(--tx);font-family:inherit;cursor:pointer" onchange="window._trendYear=this.value;renderOverview()"></select>
+            </div>
+            <div style="display:flex;align-items:center;gap:2px">
+              <button id="btn-trend-compare" onclick="window._trendMode='compare';renderOverview();" style="font-size:9px;padding:2px 7px;border-radius:4px;border:1px solid var(--bdr);cursor:pointer;font-family:inherit">月比較</button>
+              <select id="trend-month-sel" style="display:none;font-size:9px;padding:2px 4px;border-radius:4px;border:1px solid var(--bdr);background:var(--sur2);color:var(--tx);font-family:inherit;cursor:pointer" onchange="window._trendMonth=this.value;renderOverview()">
+                <option value="01">1月</option><option value="02">2月</option><option value="03">3月</option><option value="04">4月</option><option value="05">5月</option><option value="06">6月</option><option value="07">7月</option><option value="08">8月</option><option value="09">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:14px 15px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch">
+        <div id="ov-month-chart" style="white-space:nowrap"></div>
+        <div id="ov-month-labels" style="display:flex;gap:4px;margin-top:3px"></div>
+      </div>
+    </div>
+
+    <!-- 估算毛利趨勢 -->
     <div class="card" style="margin-top:10px">
       <div class="card-hd"><div class="card-title">估算毛利趨勢</div><div style="font-size:9px;color:var(--tx3)">依商品平均毛利率估算</div></div>
-      <div style="padding:14px 15px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch"><div id="ov-profit-chart" style="white-space:nowrap"></div><div id="ov-profit-labels" style="display:flex;gap:4px;margin-top:3px"></div></div>
+      <div style="padding:14px 15px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch">
+        <div id="ov-profit-chart" style="white-space:nowrap"></div>
+        <div id="ov-profit-labels" style="display:flex;gap:4px;margin-top:3px"></div>
+      </div>
     </div>
-</div>
+  </div>
 
     
 
@@ -343,7 +406,7 @@ th.r,td.r{text-align:right}
 </div>
 
 <!-- 銷售分析 -->
-<div id="pg-analysis" class="pg">
+<div id="pg-analysis" class="pg" style="display:none">
   <div class="topbar">
     <div><div class="tb-title">銷售分析</div><div class="tb-sub" id="ana-period">—</div></div>
     <div class="rf">
@@ -634,6 +697,12 @@ th.r,td.r{text-align:right}
 </div>
 
 <!-- DATA + LOGIC --><script>
+
+
+
+
+
+
 
 
 
@@ -1265,9 +1334,7 @@ function getItems(mf,sf,df,dt){return getOrds(mf,sf,df,dt).flatMap(o=>(o.items||
 function calcStats(mf,sf,df,dt){
   const ords=getOrds(mf,sf,df,dt),items=getItems(mf,sf,df,dt);
   const rev=ords.reduce((s,o)=>s+o.actual,0);
-  // 折扣（coupon+回饋金+購物金）
-  const totalDiscount=ords.reduce((s,o)=>s+(o.discount||0),0);
-  // 成本（含5%進項稅）
+  // 成本（含5%進項稅，因為定價含稅所以成本也要加稅才能比較）
   const TAX_RATE=0.05;
   let cost=0;
   items.forEach(it=>{
@@ -1277,10 +1344,10 @@ function calcStats(mf,sf,df,dt){
     if(unitCost!=null){cost+=unitCost*(1+TAX_RATE)*(it.qty||0);}
     else{cost+=(it.actualSub||it.sub||0)*0.4;}
   });
-  // 毛利 = 實際收款 - 折扣 - 含稅成本
-  const profit=rev-totalDiscount-cost;
+  // 毛利 = 實際收款（已扣折扣）- 含稅成本
+  const profit=rev-cost;
   const margin=rev>0?profit/rev*100:0;
-  return{rev,profit,margin,nOrds:ords.length,items,ords,totalDiscount,cost};
+  return{rev,profit,margin,nOrds:ords.length,items,ords,cost};
 }
 function getOvParams(){return{mf:$v('ov-month'),df:$v('ov-date-from'),dt:$v('ov-date-to')};}
 function getAnaParams(){return{mf:$v('ana-month'),sf:'',df:$v('ana-date-from'),dt:$v('ana-date-to')};}
@@ -1370,6 +1437,80 @@ function renderOrders(){
 }
 
 
+
+function renderOvExtra(){
+  const{mf,df,dt}=getOvParams(),sf='';
+  const{ords,rev}=calcStats(mf,sf,df,dt);
+  if(!ords||!ords.length)return;
+
+  // 每日銷售趨勢
+  const dayMap={};
+  ords.forEach(o=>{
+    const d=o.date||'';if(!d)return;
+    if(!dayMap[d])dayMap[d]=0;dayMap[d]+=o.actual;
+  });
+  const days=Object.keys(dayMap).sort();
+  const maxDay=Math.max(...Object.values(dayMap),1);
+  const canvas=$el('ov-daily-chart');
+  if(canvas&&days.length){
+    canvas.width=Math.max(days.length*20,300);
+    const ctx=canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const W=canvas.width,H=80,barW=Math.max(W/days.length-2,4);
+    days.forEach((d,i)=>{
+      const h=Math.max(dayMap[d]/maxDay*(H-20),2);
+      const x=i*(W/days.length);
+      ctx.fillStyle='#3b82f6';
+      ctx.fillRect(x,H-20-h,barW,h);
+      if(days.length<=31){
+        ctx.fillStyle='#94a3b8';ctx.font='8px sans-serif';ctx.textAlign='center';
+        ctx.fillText(d.slice(8),x+barW/2,H-6);
+      }
+    });
+    $set('ov-daily-bdg',days.length+' 天');
+  }
+
+  // 縣市統計
+  const cityMap={};
+  ords.forEach(o=>{
+    const city=extractCity(o.address||'');
+    if(!city)return;
+    if(!cityMap[city])cityMap[city]={cnt:0,rev:0};
+    cityMap[city].cnt++;cityMap[city].rev+=o.actual;
+  });
+  const cityEl=$el('ana-city');
+  if(cityEl){
+    const top=Object.entries(cityMap).sort((a,b)=>b[1].rev-a[1].rev).slice(0,8);
+    cityEl.innerHTML='<table style="width:100%;font-size:11px"><thead><tr><th>縣市</th><th class="r">筆</th><th class="r">金額</th></tr></thead><tbody>'+
+      top.map(([k,v])=>'<tr><td>'+k+'</td><td class="r">'+v.cnt+'</td><td class="r">'+fmt(v.rev)+'</td></tr>').join('')+
+      '</tbody></table>';
+  }
+
+  // 品項統計（前10）
+  const prodMap={};
+  ords.forEach(o=>(o.items||[]).forEach(it=>{
+    const pid=it.prodId||(it.prod&&it.prod.id)||it.code||it.name;
+    const pname=(it.prod&&it.prod.name)||it.name||pid;
+    if(!pid)return;
+    if(!prodMap[pid])prodMap[pid]={name:pname,qty:0,rev:0};
+    prodMap[pid].qty+=(it.qty||0);prodMap[pid].rev+=(it.actualSub||it.sub||0);
+  }));
+  const topProds=Object.entries(prodMap).sort((a,b)=>b[1].qty-a[1].qty).slice(0,10);
+  const maxQ=topProds[0]?topProds[0][1].qty:1;
+  const barsEl=$el('ov-top-bars');
+  if(barsEl){
+    barsEl.innerHTML=topProds.map(([pid,d])=>{
+      const pct=Math.round(d.qty/maxQ*100);
+      const name=d.name.length>14?d.name.slice(0,14)+'…':d.name;
+      return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;font-size:11px">'+
+        '<div style="width:100px;color:var(--tx2);text-align:right;flex-shrink:0">'+name+'</div>'+
+        '<div style="flex:1;background:var(--sur2);border-radius:3px;height:12px">'+
+        '<div style="width:'+pct+'%;background:var(--acc);border-radius:3px;height:100%"></div></div>'+
+        '<div style="width:40px;color:var(--tx2)">'+d.qty+'件</div>'+
+        '</div>';
+    }).join('');
+  }
+}
 function calcStock(id){
   const inv=INV[id]||{};
   if(inv.manualStock!=null&&inv.manualStock>=0){
@@ -1613,6 +1754,10 @@ function renderOverview(){
   }
 
 
+
+  // 渲染分析區
+  try{renderAnalysis();}catch(e){}
+  try{renderOvExtra();}catch(e){}
 }
 function renderBars(id,entries,key){
   const el=$el(id);if(!el)return;
@@ -2325,7 +2470,8 @@ function parseFileHTML(text,filename){
   const N=HEADERS.length;const existIds=new Set(ORDERS.map(o=>o.id));let added=0;
   for(let i=0;i<tds.length;i+=N){
     const row={};HEADERS.forEach((h,j)=>row[h]=tds[i+j]||'');
-    if(!row['訂單編號']||existIds.has(row['訂單編號']))continue;
+    if(!row['訂單編號'])continue;
+    const isExisting=existIds.has(row['訂單編號']);
     const codes=row['商品編號'].split('\n').map(s=>s.trim()).filter(Boolean);
     const names=row['品名'].split('\n').map(s=>s.trim()).filter(Boolean);
     const qtys=row['數量'].split('\n').map(s=>s.trim()).filter(Boolean);
@@ -2369,6 +2515,11 @@ function parseFileHTML(text,filename){
       return{name,code,qty,price,sub,actualSub:Math.round(sub*ratio),prod,prodId};
     });
     const discount=parseFloat(row['coupon']||0)+parseFloat(row['回饋金']||0)+parseFloat(row['購物金']||0);
+    if(isExisting){
+      const existing=ORDERS.find(o=>o.id===row['訂單編號']);
+      if(existing){existing.status=row['訂單狀態'];existing.actual=parseFloat(row['訂單實際金額'])||existing.actual;}
+      added++;continue;
+    }
     ORDERS.push({id:row['訂單編號'],date:row['下單日期'],customer:row['訂購人姓名'],status:row['訂單狀態'],actual,payment:row['付款方式'],ship:row['出貨方式'],address:row['收件人地址'],channel:'官網下單',note:row['客戶備註']||'',discount,items,filename});
     added++;
   }
@@ -2470,7 +2621,7 @@ async function loadFromCloud(){
       ordRows.forEach(r=>{
         const items=Array.isArray(r.items)?r.items:(typeof r.items==='string'?JSON.parse(r.items):[]);
         items.forEach(it=>{it.prod=it.prodId?PRODS.find(p=>p.id===it.prodId)||null:matchByKw(it.name||'');});
-        ORDERS.push({id:r.id,date:r.date,customer:r.customer||'',staff:r.staff||'',status:r.status,actual:parseFloat(r.actual)||0,payment:r.payment||'',ship:r.ship||'',address:r.address||'',channel:r.channel||'',note:r.note||'',filename:r.filename||'',items});
+        ORDERS.push({id:r.id,date:r.date,customer:r.customer||'',staff:r.staff||'',status:r.status,actual:parseFloat(r.actual)||0,payment:r.payment||'',ship:r.ship||'',address:r.address||'',channel:r.channel||'',note:r.note||'',discount:parseFloat(r.discount)||0,filename:r.filename||'',items});
       });
     }
 
@@ -2698,13 +2849,20 @@ function init(){
     if(eb){
       const id=eb.dataset.id;
       const o=ORDERS.find(x=>x.id===id);if(!o)return;
-      $el('oe-date').value=o.date||'';
-      $el('oe-customer').value=o.customer||'';
-      $el('oe-actual').value=o.actual||0;
-      $el('oe-status').value=o.status||'已出貨';
-      $el('oe-note').value=o.note||'';
-      $el('ord-edit-modal')._editId=id;
+      const modal=$el('ord-edit-modal');if(!modal)return;
+      // 先開 modal 再設值，確保元素存在
       openModal('ord-edit-modal');
+      modal._editId=id;
+      const setV=(elId,val)=>{const el=$el(elId);if(el)el.value=val;};
+      setV('oe-date',o.date||'');
+      setV('oe-customer',o.customer||'');
+      setV('oe-actual',o.actual||0);
+      setV('oe-status',o.status||'已出貨');
+      setV('oe-note',o.note||'');
+      const oeStaff=$el('oe-staff');
+      if(oeStaff){oeStaff.innerHTML='<option value="">未指定</option>'+STAFF.map(s=>'<option'+(s===o.staff?' selected':'')+'>'+s+'</option>').join('');}
+      const oePay=$el('oe-payment');
+      if(oePay&&o.payment){[...oePay.options].forEach(opt=>{if(opt.value===o.payment)opt.selected=true;});}
       e.stopPropagation();return;
     }
     const db=e.target.closest('.ord-del-btn');
@@ -2724,19 +2882,23 @@ function init(){
   if(oeSave)oeSave.addEventListener('click',function(){
     const id=$el('ord-edit-modal')._editId;if(!id)return;
     const o=ORDERS.find(x=>x.id===id);if(!o)return;
-    o.date=$el('oe-date').value;
-    o.customer=$el('oe-customer').value;
-    o.actual=parseFloat($el('oe-actual').value)||0;
-    o.status=$el('oe-status').value;
-    o.note=$el('oe-note').value;
+    o.date=($el('oe-date')||{}).value||o.date;
+    o.customer=($el('oe-customer')||{}).value||'';
+    o.actual=parseFloat(($el('oe-actual')||{}).value)||o.actual;
+    o.status=($el('oe-status')||{}).value||o.status;
+    o.note=($el('oe-note')||{}).value||'';
+    o.staff=($el('oe-staff')||{}).value||'';
+    o.payment=($el('oe-payment')||{}).value||'';
     fetch(SUPA_URL+'/rest/v1/orders?id=eq.'+encodeURIComponent(id),{
       method:'PATCH',
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify({date:o.date,customer:o.customer,actual:o.actual,status:o.status,note:o.note})
-    }).then(()=>{closeModal('ord-edit-modal');renderOrdTable();renderOverview();showToast('訂單已更新');})
-    .catch(()=>showToast('更新失敗','err'));
+      body:JSON.stringify({date:o.date,customer:o.customer,actual:o.actual,status:o.status,note:o.note,staff:o.staff,payment:o.payment})
+    }).then(r=>{
+      if(r.ok){closeModal('ord-edit-modal');renderOrdTable();renderOverview();renderOrders();showToast('訂單已更新 ✓');}
+      else{r.text().then(t=>showToast('更新失敗：'+t.slice(0,50),'err'));}
+    }).catch(()=>showToast('更新失敗，請檢查網路','err'));
   });
-  const oeCancel=$el('oe-cancel');if(oeCancel)oeCancel.addEventListener('click',()=>closeModal('ord-edit-modal'));
+    const oeCancel=$el('oe-cancel');if(oeCancel)oeCancel.addEventListener('click',()=>closeModal('ord-edit-modal'));
   const oeClose=$el('ord-edit-close');if(oeClose)oeClose.addEventListener('click',()=>closeModal('ord-edit-modal'));
 
   // Orders page
@@ -3077,7 +3239,19 @@ function exportReport(){
 
 
 
+
+
+
+
+
+
 </script>
+
+
+
+
+
+
 
 
 

@@ -233,7 +233,7 @@ th.r,td.r{text-align:right}
   <div class="sb-sec">銷售</div>
   <div class="nav" id="nav-sales"><span>🧾</span>銷貨</div>
   <div class="nav" id="nav-orders"><span>📋</span>訂單明細</div>
-  <div class="nav" id="nav-analysis" onclick="go('overview')" style="cursor:pointer"><span>📊</span>銷售分析</div>
+  <div class="nav" id="nav-analysis"><span>📊</span>銷售分析</div>
   <div class="sb-sec">進銷存</div>
   <div class="nav" id="nav-products"><span>📦</span>商品總覽</div>
   <div class="nav" id="nav-purchase"><span>🚚</span>進貨</div>
@@ -342,10 +342,6 @@ th.r,td.r{text-align:right}
         <div id="ov-profit-labels" style="display:flex;gap:4px;margin-top:3px"></div>
       </div>
     </div>
-  </div>
-
-    
-
 
 
 <!-- 銷貨 -->
@@ -695,8 +691,11 @@ th.r,td.r{text-align:right}
     </div>
   </div>
 </div>
+</div><!-- /main -->
 
 <!-- DATA + LOGIC --><script>
+
+
 
 
 
@@ -2709,7 +2708,7 @@ function go(page){
   if(page==='overview'){
     setTimeout(renderOverview,50);
     setTimeout(()=>{try{renderAnalysis();}catch(e){}try{renderOvExtra();}catch(e){}},150);
-  } else if(page==='analysis')renderAnalysis();
+  } else if(page==='analysis'){go('overview');return;}
   else if(page==='inventory')renderInventory();
   else if(page==='purchase')renderPurchases();
   else if(page==='products')renderProducts();
@@ -2825,9 +2824,12 @@ function init(){
   });
 
   // Nav
-  ['overview','sales','orders','analysis','products','purchase','inventory','stocktake','settings'].forEach(page=>{
+  ['overview','sales','orders','products','purchase','inventory','stocktake','settings'].forEach(page=>{
     const nav=$el('nav-'+page);if(nav)nav.addEventListener('click',()=>go(page));
   });
+  // 銷售分析 → 跳到總覽頁（分析已合併）
+  const navAna=$el('nav-analysis');
+  if(navAna)navAna.addEventListener('click',()=>go('overview'));
 
   // Sales tabs
   [[0,'sales'],[1,'sales']].forEach(([i,g])=>{const t=$el('tab-'+g+'-'+i);if(t)t.addEventListener('click',()=>goTab(g,i));});
@@ -3248,7 +3250,11 @@ function exportReport(){
 
 
 
+
+
 </script>
+
+
 
 
 

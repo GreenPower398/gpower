@@ -709,6 +709,7 @@ th.r,td.r{text-align:right}
 
 
 
+
 const HIST_NAME_MAP={
   // 舊網站商品編號 → 新品號
   "短效活力貼":"HP01001","長效活力貼":"HP02001","隱形款活力貼":"HP03001",
@@ -1948,10 +1949,32 @@ function renderProducts(){
 function openProdEdit(id){
   const p=PRODS.find(x=>x.id===id);if(!p)return;
   editingProdId=id;
-  $set('pm-id',p.id);$set('pm-name',p.name);
+  $set('pm-id',p.id);
+  const pne=$el('pm-name-edit');if(pne)pne.value=p.name||'';
   const pc=$el('pm-cost'),pp=$el('pm-price');
   if(pc)pc.value=p.cost!=null?p.cost:'';
   if(pp)pp.value=p.price!=null?p.price:'';
+  const pv=$el('pm-vendor');if(pv)pv.value=(PROD_EXTRA[id]||{}).vendor||'';
+  const pnote=$el('pm-note');if(pnote)pnote.value=p.note||'';
+  const pdis=$el('pm-disabled');if(pdis)pdis.checked=p.disabled||((PROD_EXTRA[id]||{}).disabled)||false;
+  // 分類
+  const pmCat=$el('pm-cat');
+  if(pmCat){
+    pmCat.innerHTML=Object.keys(CAT_SUB_MAP).map(cat=>'<option'+(cat===p.cat?' selected':'')+'>'+cat+'<\/option>').join('');
+    pmCat.onchange=function(){
+      const subs=CAT_SUB_MAP[this.value]||[];
+      const ss=$el('pm-sub-sel');if(ss)ss.innerHTML=subs.map(s=>'<option>'+s+'<\/option>').join('')+'<option value="__other__">自訂…<\/option>';
+      const si=$el('pm-sub-input');if(si)si.style.display='none';
+    };
+  }
+  // 子類
+  const pmSubSel=$el('pm-sub-sel'),pmSubIn=$el('pm-sub-input');
+  if(pmSubSel){
+    const subs=CAT_SUB_MAP[p.cat]||[];
+    pmSubSel.innerHTML=subs.map(s=>'<option'+(s===p.sub?' selected':'')+'>'+s+'<\/option>').join('')+'<option value="__other__">自訂…<\/option>';
+    if(p.sub&&!subs.includes(p.sub)&&pmSubIn){pmSubSel.value='__other__';pmSubIn.style.display='';pmSubIn.value=p.sub;}
+    pmSubSel.onchange=function(){if(pmSubIn){if(this.value==='__other__'){pmSubIn.style.display='';pmSubIn.focus();}else{pmSubIn.style.display='none';}}};
+  }
   updatePmPreview();openModal('prod-modal');
 }
 function updatePmPreview(){
@@ -1963,15 +1986,24 @@ function updatePmPreview(){
 function saveProdEdit(){
   const p=PRODS.find(x=>x.id===editingProdId);if(!p)return;
   const cv=$el('pm-cost').value,pv=$el('pm-price').value;
+  const newName=($el('pm-name-edit')||{}).value;if(newName)p.name=newName;
+  const pmCatVal=($el('pm-cat')||{}).value;if(pmCatVal)p.cat=pmCatVal;
+  const pmSubSel2=$el('pm-sub-sel'),pmSubIn2=$el('pm-sub-input');
+  const newSub=pmSubSel2&&pmSubSel2.value&&pmSubSel2.value!=='__other__'?pmSubSel2.value:(pmSubIn2&&pmSubIn2.value&&pmSubIn2.style.display!=='none'?pmSubIn2.value:'');
+  if(newSub)p.sub=newSub;
   p.cost=cv===''?null:parseFloat(cv);p.price=parseFloat(pv)||p.price;
+  const vendorVal=($el('pm-vendor')||{}).value||'';
+  const noteVal=($el('pm-note')||{}).value||'';
+  const disabledVal=($el('pm-disabled')||{}).checked||false;
+  p.disabled=disabledVal;p.note=noteVal;
+  if(!PROD_EXTRA[p.id])PROD_EXTRA[p.id]={};
+  PROD_EXTRA[p.id].vendor=vendorVal;PROD_EXTRA[p.id].disabled=disabledVal;
   try{localStorage.setItem('gpower_prods',JSON.stringify(PRODS.map(x=>({id:x.id,cost:x.cost,price:x.price}))));}catch(e){}
-  // 同步存到 Supabase prod_extra
-  const ex2=PROD_EXTRA[p.id]||{};
   fetch(SUPA_URL+'/rest/v1/prod_extra?on_conflict=product_id',{
     method:'POST',
     headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},
-    body:JSON.stringify([{product_id:p.id,cost:p.cost,price:p.price,vendor:ex2.vendor||'',disabled:ex2.disabled||false}])
-  }).catch(e=>console.warn('cost save failed',e));
+    body:JSON.stringify([{product_id:p.id,cost:p.cost,price:p.price,vendor:vendorVal,disabled:disabledVal,is_custom:PROD_EXTRA[p.id].isCustom||false,custom_name:p.name,custom_cat:p.cat,custom_sub:p.sub}])
+  }).catch(e=>console.warn('save failed',e));
   closeModal('prod-modal');renderProducts();renderInventory();
   showToast(p.name+' 已更新！');
 }
@@ -2272,6 +2304,27 @@ function _pickerBack(){
   else{showPickerCats();}
 }
 
+
+function filterPickerSearch(q){
+  q=(q||'').toLowerCase().trim();
+  if(!q){showPickerCats();const si=$el('picker-search-input');if(si){si.value='';setTimeout(()=>si.focus(),50);}return;}
+  const el=$el('picker-content');if(!el)return;
+  el.innerHTML='';
+  const results=PRODS.filter(p=>!(p.disabled||(PROD_EXTRA[p.id]||{}).disabled)&&
+    (p.name.toLowerCase().includes(q)||p.id.toLowerCase().includes(q))).slice(0,40);
+  if(!results.length){el.innerHTML='<div style="grid-column:1/-1;color:var(--tx3);font-size:12px;padding:20px;text-align:center">找不到商品</div>';return;}
+  results.forEach(p=>{
+    const btn=document.createElement('div');
+    btn.className='picker-prod-btn'+(pickerSelectedIds.has(p.id)?' selected':'');
+    btn.innerHTML='<div class="ppb-name">'+p.name+'<\/div><div class="ppb-price">'+(p.price?'$'+p.price:'—')+'<\/div>';
+    btn.onclick=function(){
+      if(pickerSelectedIds.has(p.id)){pickerSelectedIds.delete(p.id);btn.classList.remove('selected');}
+      else{pickerSelectedIds.add(p.id);btn.classList.add('selected');}
+      $set('picker-count',pickerSelectedIds.size);
+    };
+    el.appendChild(btn);
+  });
+}
 function showPickerCats(){
   $el('picker-cat-view').style.display='block';$el('picker-prod-view').style.display='none';
   const el=$el('picker-cat-list');if(!el)return;el.innerHTML='';
@@ -3255,7 +3308,9 @@ function exportReport(){
 
 
 
+
 </script>
+
 
 
 

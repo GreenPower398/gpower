@@ -706,6 +706,8 @@ th.r,td.r{text-align:right}
 
 
 
+
+
 const HIST_NAME_MAP={
   // 舊網站商品編號 → 新品號
   "短效活力貼":"HP01001","長效活力貼":"HP02001","隱形款活力貼":"HP03001",
@@ -1755,9 +1757,6 @@ function renderOverview(){
 
 
 
-  // 渲染分析區
-  try{renderAnalysis();}catch(e){}
-  try{renderOvExtra();}catch(e){}
 }
 function renderBars(id,entries,key){
   const el=$el(id);if(!el)return;
@@ -2707,15 +2706,17 @@ function go(page){
   document.querySelectorAll('.nav').forEach(n=>n.classList.remove('on'));
   const pg=$el('pg-'+page);if(pg)pg.classList.add('on');
   const nav=$el('nav-'+page);if(nav)nav.classList.add('on');
-  if(page==='orders')setTimeout(renderOrders,50);
-  if(page==='overview')setTimeout(()=>{renderOverview();renderAnalysis();},50);
-  if(page==='analysis')renderAnalysis();
+  if(page==='overview'){
+    setTimeout(renderOverview,50);
+    setTimeout(()=>{try{renderAnalysis();}catch(e){}try{renderOvExtra();}catch(e){}},150);
+  } else if(page==='analysis')renderAnalysis();
   else if(page==='inventory')renderInventory();
   else if(page==='purchase')renderPurchases();
   else if(page==='products')renderProducts();
-  else if(page==='overview')renderOverview();
   else if(page==='sales')renderOrdTable();
+  else if(page==='orders')setTimeout(renderOrders,50);
   else if(page==='settings')renderSettingsPage();
+  else if(page==='stocktake')renderST();
 }
 function goTab(group,idx){
   const prefix=group==='sales'?'sales-tp':'ana-tp';
@@ -3245,7 +3246,11 @@ function exportReport(){
 
 
 
+
+
 </script>
+
+
 
 
 

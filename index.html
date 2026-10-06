@@ -721,6 +721,9 @@ th.r,td.r{text-align:right}
 
 
 
+
+
+
 const HIST_NAME_MAP={
   // 舊網站商品編號 → 新品號
   "短效活力貼":"HP01001","長效活力貼":"HP02001","隱形款活力貼":"HP03001",
@@ -1525,6 +1528,41 @@ function renderOvExtra(){
         '</div>';
     }).join('');
   }
+
+  // 分類銷售額圓餅
+  const catRevMap={};
+  ords.forEach(o=>(o.items||[]).forEach(it=>{
+    const p=it.prod||(it.prodId?PRODS.find(x=>x.id===it.prodId):null);
+    const cat=p?p.cat:'其他';
+    if(!catRevMap[cat])catRevMap[cat]=0;
+    catRevMap[cat]+=(it.actualSub||it.sub||0);
+  }));
+  const catEntries=Object.entries(catRevMap).sort((a,b)=>b[1]-a[1]);
+  const totalCatRev=catEntries.reduce((s,[,v])=>s+v,0)||1;
+  const COLORS=['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#84cc16'];
+  // 圓餅
+  const pieCanvas=$el('ov-cat-pie');
+  if(pieCanvas&&catEntries.length){
+    const ctx=pieCanvas.getContext('2d');
+    const W=120,H=120,cx=60,cy=60,r=50;
+    ctx.clearRect(0,0,W,H);
+    let angle=-Math.PI/2;
+    catEntries.forEach(([,v],i)=>{
+      const slice=v/totalCatRev*Math.PI*2;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,angle,angle+slice);ctx.closePath();
+      ctx.fillStyle=COLORS[i%COLORS.length];ctx.fill();
+      angle+=slice;
+    });
+  }
+  // 圖例
+  const legend=$el('ov-cat-legend');
+  if(legend)legend.innerHTML=catEntries.map(([k,v],i)=>
+    '<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">'+
+    '<div style="width:10px;height:10px;border-radius:2px;background:'+COLORS[i%COLORS.length]+';flex-shrink:0"></div>'+
+    '<span style="color:var(--tx2)">'+k+'</span><span style="margin-left:auto;color:var(--tx)">'+(v/totalCatRev*100).toFixed(0)+'%</span>'+
+    '</div>'
+  ).join('');
+  $set('ov-cat-bdg',fmt(rev));
 }
 function calcStock(id){
   const inv=INV[id]||{};
@@ -1892,6 +1930,15 @@ function renderAnalysis(){
   mkSmallTable('ana-city',Object.entries(city).sort((a,b)=>b[1].cnt-a[1].cnt).slice(0,10).map(([k,d])=>[k,d.cnt+'筆',fmt(d.rev)]),['縣市','筆','金額']);
   const staffMap={};ords.forEach(o=>{const s=o.staff||'未指定';if(!staffMap[s])staffMap[s]={cnt:0,rev:0};staffMap[s].cnt++;staffMap[s].rev+=o.actual;});
   mkSmallTable('ana-staff',Object.entries(staffMap).filter(([k])=>k!=='未指定').sort((a,b)=>b[1].rev-a[1].rev).map(([k,d])=>[k,d.cnt+'筆',fmt(d.rev),fmt(d.rev/d.cnt)]),['員工','筆','業績','均單']);
+  // 銷售管道
+  const chMap={'網路':0,'現場':0,'其他':0};
+  ords.forEach(o=>{
+    const id=(o.id||''),ch=(o.channel||'').toLowerCase();
+    if(id.startsWith('O')||ch.includes('官網')||ch.includes('網路')||ch.includes('網站')){chMap['網路']+=o.actual;}
+    else if(id.startsWith('M')||ch.includes('現場')){chMap['現場']+=o.actual;}
+    else{chMap['其他']+=o.actual;}
+  });
+  mkSmallTable('ana-channel',Object.entries(chMap).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,fmt(v),(v/Math.max(rev,1)*100).toFixed(0)+'%']),['管道','金額','佔比']);
 }
 
 function showAnaDetail(title,stats,renderFn){
@@ -2318,12 +2365,19 @@ function _pickerBack(){
 
 function filterPickerSearch(q){
   q=(q||'').toLowerCase().trim();
-  if(!q){showPickerCats();const si=$el('picker-search-input');if(si){si.value='';setTimeout(()=>si.focus(),50);}return;}
-  const el=$el('picker-content');if(!el)return;
+  if(!q){showPickerCats();return;}
+  // 顯示搜尋結果在 picker-prod-view
+  const catView=$el('picker-cat-view'),prodView=$el('picker-prod-view');
+  if(catView)catView.style.display='none';
+  if(prodView)prodView.style.display='block';
+  const el=$el('picker-prod-list');if(!el)return;
   el.innerHTML='';
   const results=PRODS.filter(p=>!(p.disabled||(PROD_EXTRA[p.id]||{}).disabled)&&
     (p.name.toLowerCase().includes(q)||p.id.toLowerCase().includes(q))).slice(0,40);
-  if(!results.length){el.innerHTML='<div style="grid-column:1/-1;color:var(--tx3);font-size:12px;padding:20px;text-align:center">找不到商品</div>';return;}
+  if(!results.length){
+    el.innerHTML='<div style="grid-column:1/-1;color:var(--tx3);font-size:12px;padding:20px;text-align:center">找不到「'+q+'」</div>';
+    return;
+  }
   results.forEach(p=>{
     const btn=document.createElement('div');
     btn.className='picker-prod-btn'+(pickerSelectedIds.has(p.id)?' selected':'');
@@ -3322,7 +3376,13 @@ function exportReport(){
 
 
 
+
+
+
 </script>
+
+
+
 
 
 

@@ -418,6 +418,11 @@ th.r,td.r{text-align:right}
     </div>
   </div>
   <div class="content">
+    <!-- 分類庫存佔比 -->
+    <div class="card" style="margin-bottom:10px" id="inv-cat-chart-card">
+      <div class="card-hd"><div class="card-title">庫存成本分類佔比</div><div class="bdg" id="inv-cat-total"></div></div>
+      <div id="inv-cat-bars" style="padding:8px 14px 10px"></div>
+    </div>
     <div class="stats s4" style="margin-bottom:12px">
       <div class="sc"><div class="sc-lbl">銷售額</div><div class="sc-val cg" id="ana-rev">—</div></div>
       <div class="sc"><div class="sc-lbl">估算毛利</div><div class="sc-val ca" id="ana-profit">—</div><div class="sc-sub" id="ana-mg-sub"></div></div>
@@ -533,6 +538,7 @@ th.r,td.r{text-align:right}
       <input class="fis" type="text" id="inv-search" placeholder="搜尋商品…" style="flex:1">
       <select class="fis" id="inv-cat-sel" style="width:108px"><option value="">全部分類</option></select>
       <select class="fis" id="inv-status-sel" style="width:100px"><option value="">全部狀態</option><option value="zero">零庫存</option><option value="low">低庫存</option><option value="ok">正常</option></select>
+      <select class="fis" id="inv-sort-sel" style="width:110px"><option value="default">預設排序</option><option value="cost-desc">庫存成本↓</option><option value="cost-asc">庫存成本↑</option><option value="stock-desc">庫存量↓</option></select>
     </div>
     <div style="font-size:11px;color:var(--tx2);margin-bottom:9px">💡「初始庫存」填入建置系統前的現有庫存量，進貨和銷貨自動累計。</div>
     <div class="card"><div class="card-hd"><div class="card-title">庫存清單</div><div class="bdg" id="inv-bdg">0 項</div></div><div id="inv-tbl"></div></div>
@@ -679,7 +685,11 @@ th.r,td.r{text-align:right}
         <div><div class="fl">廠商</div><input type="text" class="fi" id="pm-vendor" placeholder="廠商名稱"></div>
         <div><div class="fl">備注</div><input type="text" class="fi" id="pm-note" placeholder="選填"></div>
       </div>
-      <div id="pm-preview" style="padding:8px 12px;background:var(--sur2);border-radius:7px;margin-bottom:12px;font-size:12px;color:var(--tx2)">毛利率預覽：—</div>
+      <div id="pm-preview" style="padding:8px 12px;background:var(--sur2);border-radius:7px;margin-bottom:8px;font-size:12px;color:var(--tx2)">毛利率預覽：—</div>
+      <details style="margin-bottom:12px">
+        <summary style="font-size:11px;color:var(--tx2);cursor:pointer;padding:4px 0">📊 庫存歷史記錄</summary>
+        <div id="pm-stock-history" style="margin-top:8px;font-size:11px;max-height:160px;overflow-y:auto"></div>
+      </details>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
         <input type="checkbox" id="pm-disabled" style="width:16px;height:16px">
         <label for="pm-disabled" style="font-size:12px;color:var(--tx2)">標記為停售</label>
@@ -717,6 +727,8 @@ th.r,td.r{text-align:right}
 
 
 <!-- DATA + LOGIC --><script>
+
+
 
 
 
@@ -2054,7 +2066,31 @@ function openProdEdit(id){
     if(p.sub&&!subs.includes(p.sub)&&pmSubIn){pmSubSel.value='__other__';pmSubIn.style.display='';pmSubIn.value=p.sub;}
     pmSubSel.onchange=function(){if(pmSubIn){if(this.value==='__other__'){pmSubIn.style.display='';pmSubIn.focus();}else{pmSubIn.style.display='none';}}};
   }
-  updatePmPreview();openModal('prod-modal');
+  updatePmPreview();
+  // 載入庫存歷史
+  const histEl=$el('pm-stock-history');
+  if(histEl){
+    const inv=INV[id]||{};
+    const events=[];
+    if(inv.stockDate)events.push({date:inv.stockDate,type:'盤點',qty:inv.manualStock,color:'var(--pur)'});
+    PURCHASES.filter(x=>x.productId===id).forEach(x=>events.push({date:x.date||'',type:'進貨',qty:'+'+x.qty,color:'var(--grn)'}));
+    ORDERS.filter(o=>o.status==='已出貨').forEach(o=>{
+      (o.items||[]).forEach(it=>{
+        if((it.prodId===id)||(it.prod&&it.prod.id===id)||(it.code===id)){
+          events.push({date:o.date||'',type:'銷售',qty:'−'+(it.qty||0),color:'var(--red)'});
+        }
+      });
+    });
+    events.sort((a,b)=>b.date.localeCompare(a.date));
+    histEl.innerHTML=events.length?events.slice(0,20).map(e=>
+      '<div style="display:flex;gap:8px;padding:4px 0;border-bottom:1px solid var(--bdr)">'+
+      '<span style="color:var(--tx3);flex-shrink:0">'+e.date+'</span>'+
+      '<span style="color:'+e.color+';flex-shrink:0">'+e.type+'</span>'+
+      '<span style="margin-left:auto">'+e.qty+'</span>'+
+      '</div>'
+    ).join(''):'<div style="color:var(--tx3);padding:8px 0">尚無庫存變動記錄</div>';
+  }
+  openModal('prod-modal');
 }
 function updatePmPreview(){
   const c=parseFloat($v('pm-cost')),p=parseFloat($v('pm-price'));
@@ -2260,10 +2296,16 @@ function renderInventory(){
       &&(!invCatF||p.cat===invCatF)
       &&(!invStF||(invStF==='zero'&&s===0)||(invStF==='low'&&s>0&&s<sf)||(invStF==='ok'&&s>=sf));
   });
+  // 排序
+  const invSortMode=($el('inv-sort-sel')||{}).value||'default';
   filtInv.sort((a,b)=>{
     const da=a.disabled||((PROD_EXTRA[a.id]||{}).disabled)||false;
     const db=b.disabled||((PROD_EXTRA[b.id]||{}).disabled)||false;
-    if(da&&!db)return 1;if(!da&&db)return -1;return 0;
+    if(da&&!db)return 1;if(!da&&db)return -1;
+    if(invSortMode==='cost-desc'){const ca=(a.cost||0)*calcStock(a.id),cb=(b.cost||0)*calcStock(b.id);return cb-ca;}
+    if(invSortMode==='cost-asc'){const ca=(a.cost||0)*calcStock(a.id),cb=(b.cost||0)*calcStock(b.id);return ca-cb;}
+    if(invSortMode==='stock-desc')return calcStock(b.id)-calcStock(a.id);
+    return 0;
   });
   $set('inv-bdg',filtInv.length+' 項');
   const rows=filtInv.map(p=>{
@@ -2275,6 +2317,32 @@ function renderInventory(){
   }).join('');
   const tbl=$el('inv-tbl');
   if(tbl)tbl.innerHTML='<table><thead><tr><th>品號<\/th><th>商品<\/th><th>分類<\/th><th class="r">初始庫存<\/th><th class="r">現有庫存<\/th><th class="r">安全庫存<\/th><th class="r">庫存成本<\/th><th>狀態<\/th><\/tr><\/thead><tbody>'+rows+'<\/tbody><\/table>';
+  // 分類佔比
+  const catCostMap={};
+  PRODS.forEach(p=>{
+    const s=calcStock(p.id);
+    if(s>0&&p.cost!=null){
+      if(!catCostMap[p.cat])catCostMap[p.cat]=0;
+      catCostMap[p.cat]+=p.cost*s;
+    }
+  });
+  const totalCatCost=Object.values(catCostMap).reduce((a,b)=>a+b,0)||1;
+  const catBars=$el('inv-cat-bars');
+  const catTotal=$el('inv-cat-total');
+  if(catTotal)catTotal.textContent=fmt(totalCatCost);
+  if(catBars){
+    const sorted=Object.entries(catCostMap).sort((a,b)=>b[1]-a[1]);
+    catBars.innerHTML=sorted.map(([cat,cost])=>{
+      const pct=Math.round(cost/totalCatCost*100);
+      return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px">'+
+        '<div style="width:60px;color:var(--tx2);text-align:right;flex-shrink:0">'+cat+'</div>'+
+        '<div style="flex:1;background:var(--sur2);border-radius:3px;height:14px;position:relative">'+
+        '<div style="width:'+pct+'%;background:var(--acc);border-radius:3px;height:100%"></div></div>'+
+        '<div style="width:45px;color:var(--tx2)">'+pct+'%</div>'+
+        '<div style="width:70px;color:var(--tx);text-align:right">'+fmt(cost)+'</div>'+
+        '</div>';
+    }).join('');
+  }
 }
 
 // ══ Stocktake ══
@@ -3542,7 +3610,11 @@ function exportReport(){
     renderST();
   });
 
+
+
 </script>
+
+
 
 
 

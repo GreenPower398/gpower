@@ -551,7 +551,8 @@ th.r,td.r{text-align:right}
   <div class="content">
     <div class="fbar">
       <input class="fis" type="text" id="st-search" placeholder="搜尋商品…" style="flex:1">
-      <select class="fis" id="st-cat-sel" style="width:108px"><option value="">全部分類</option></select>
+      <select class="fis" id="st-cat-sel" style="width:110px"><option value="">全部分類</option></select>
+      <button class="btn btn-sm btn-out" id="btn-st-toggle-dis" onclick="window._stShowDisabled=!window._stShowDisabled;this.textContent=window._stShowDisabled?'隱藏停售':'顯示停售';renderST();" style="white-space:nowrap">顯示停售</button>
     </div>
     <div class="card"><div class="card-hd"><div class="card-title">盤點清單</div><div class="rf"><div class="bdg" id="st-bdg">0 項</div><div class="bdg cr" id="st-diff-bdg"></div></div></div><div id="st-tbl"><div class="empty">點擊「開始新盤點」產生清單</div></div></div>
   </div>
@@ -716,6 +717,8 @@ th.r,td.r{text-align:right}
 
 
 <!-- DATA + LOGIC --><script>
+
+
 
 
 
@@ -1426,7 +1429,7 @@ function popSelects(){
   const npcat=$el('np-cat');
   if(npcat)npcat.innerHTML='<option value="">選擇分類…<\/option>'+CATEGORIES.map(c=>'<option value="'+c+'">'+c+'<\/option>').join('');
   // inv/st cat selects
-  ['inv-cat-sel','st-cat-sel'].forEach(id=>{
+  ['inv-cat-sel'].forEach(id=>{
     const el=$el(id);if(!el)return;
     const cv=el.value;
     el.innerHTML='<option value="">全部分類<\/option>'+CATEGORIES.map(c=>'<option value="'+c+'">'+c+'<\/option>').join('');
@@ -2276,9 +2279,18 @@ function renderInventory(){
 
 // ══ Stocktake ══
 function startST(){
+  // 包含所有商品（含新增的自訂商品）
   ST_DATA=PRODS.map(p=>({prod:p,book:calcStock(p.id),actual:null}));
   filtST=[...PRODS];
+  window._stShowDisabled=false; // 預設隱藏停售
+  window._stCatFilter='';
   $set('st-date-lbl','盤點日期：'+new Date().toLocaleDateString('zh-TW'));
+  // 更新分類選單
+  const catSel=$el('st-cat-sel');
+  if(catSel){
+    const cats=[...new Set(PRODS.map(p=>p.cat))].sort();
+    catSel.innerHTML='<option value="">全部分類</option>'+cats.map(c=>'<option>'+c+'</option>').join('');
+  }
   renderST();
 }
 function finishST(){
@@ -2286,18 +2298,72 @@ function finishST(){
   let c=0;ST_DATA.forEach(d=>{if(d.actual!==null){if(!INV[d.prod.id])INV[d.prod.id]={};INV[d.prod.id].manualStock=d.actual;INV[d.prod.id].stockDate=today;c++;}});
   saveInv();showToast('盤點完成！共調整 '+c+' 個品項。');renderInventory();
 }
+function getLastStockDate(prodId){
+  // 找最近一次庫存變動時間（盤點/進貨/銷貨）
+  const inv=INV[prodId]||{};
+  const dates=[];
+  if(inv.stockDate)dates.push(inv.stockDate);
+  PURCHASES.filter(p=>p.productId===prodId&&p.date).forEach(p=>dates.push(p.date));
+  ORDERS.filter(o=>o.status==='已出貨'&&o.date).forEach(o=>{
+    if((o.items||[]).some(it=>(it.prodId||(it.prod&&it.prod.id))===prodId))dates.push(o.date);
+  });
+  return dates.sort().reverse()[0]||null;
+}
+
 function renderST(){
-  const list=filtST.map(p=>ST_DATA.find(d=>d.prod.id===p.id)||{prod:p,book:calcStock(p.id),actual:null});
+  const showDis=window._stShowDisabled!==false;
+  let list=filtST
+    .filter(p=>showDis||(!(p.disabled||((PROD_EXTRA[p.id]||{}).disabled))))
+    .map(p=>{
+      const existing=ST_DATA.find(d=>d.prod.id===p.id);
+      return existing||{prod:p,book:calcStock(p.id),actual:null};
+    });
   $set('st-bdg',list.length+' 項');
   const diffs=list.filter(d=>d.actual!==null&&d.actual!==d.book).length;
   $set('st-diff-bdg',diffs>0?'⚠️ '+diffs+' 項有差異':'');
   const rows=list.map(d=>{
     const diff=d.actual!==null?d.actual-d.book:null;
     const dc=diff===null?'':diff>0?'color:var(--grn)':diff<0?'color:var(--red)':'';
-    return '<tr><td style="font-size:10px">'+d.prod.id+'<\/td><td style="font-size:11px">'+d.prod.name+'<\/td><td><span class="tag tb">'+d.prod.cat+'<\/span><\/td><td class="r">'+d.book+'<\/td><td class="r"><input class="stock-in" type="number" min="0" placeholder="填入" value="'+(d.actual!=null?d.actual:'')+'" data-stpid="'+d.prod.id+'"><\/td><td class="r" style="'+dc+'">'+(diff===null?'—':diff>0?'+'+diff:diff)+'<\/td><\/tr>';
+    const isDis=d.prod.disabled||((PROD_EXTRA[d.prod.id]||{}).disabled)||false;
+    const lastDate=getLastStockDate(d.prod.id);
+    const inv=INV[d.prod.id]||{};
+    const lastLabel=inv.stockDate?('盤點'+inv.stockDate):lastDate?('變動'+lastDate):'無紀錄';
+    return '<tr'+(isDis?' style="opacity:0.5"':'')+'><td style="font-size:10px">'+d.prod.id+'<\/td>'+
+      '<td style="font-size:11px">'+(isDis?'<span style="font-size:9px;color:var(--tx3)">[停售] <\/span>':'')+d.prod.name+'<\/td>'+
+      '<td><span class="tag tb">'+d.prod.cat+'<\/span><\/td>'+
+      '<td class="r" style="font-size:11px">'+d.book+'<div style="font-size:9px;color:var(--tx3)">'+lastLabel+'<\/div><\/td>'+
+      '<td class="r"><input class="stock-in" type="number" min="0" placeholder="填入" value="'+(d.actual!=null?d.actual:'')+'" data-stpid="'+d.prod.id+'"><\/td>'+
+      '<td class="r" style="'+dc+'">'+(diff===null?'—':diff>0?'+'+diff:diff)+'<\/td><\/tr>';
   }).join('');
   const tbl=$el('st-tbl');
-  if(tbl)tbl.innerHTML='<table><thead><tr><th>品號<\/th><th>商品名稱<\/th><th>分類<\/th><th class="r">帳面<\/th><th class="r">實盤<\/th><th class="r">差異<\/th><\/tr><\/thead><tbody>'+rows+'<\/tbody><\/table>';
+  if(tbl)tbl.innerHTML='<table><thead><tr><th>品號<\/th><th>商品名稱<\/th><th>分類<\/th><th class="r">帳面庫存<\/th><th class="r">實盤<\/th><th class="r">差異<\/th><\/tr><\/thead><tbody>'+rows+'<\/tbody><\/table>';
+  // 重新綁定 input 事件（innerHTML 後需要重綁）
+  if(tbl)tbl.querySelectorAll('.stock-in').forEach(inp=>{
+    inp.addEventListener('input',function(){
+      const id=this.dataset.stpid;
+      const d=ST_DATA.find(x=>x.prod.id===id);
+      if(d){d.actual=this.value===''?null:parseInt(this.value);}
+      else{
+        const p=PRODS.find(x=>x.id===id);
+        if(p)ST_DATA.push({prod:p,book:calcStock(id),actual:parseInt(this.value)});
+      }
+      // 更新差異
+      const row=this.closest('tr');
+      if(row){
+        const book=parseInt(this.closest('tr').querySelector('td:nth-child(4)').textContent)||0;
+        const actual=this.value===''?null:parseInt(this.value);
+        const diffCell=row.querySelector('td:last-child');
+        if(diffCell){
+          const diff=actual===null?null:actual-book;
+          diffCell.textContent=diff===null?'—':diff>0?'+'+diff:diff;
+          diffCell.style.color=diff===null?'':diff>0?'var(--grn)':diff<0?'var(--red)':'';
+        }
+      }
+      // 更新差異統計
+      const diffs=ST_DATA.filter(d=>d.actual!==null&&d.actual!==d.book).length;
+      $set('st-diff-bdg',diffs>0?'⚠️ '+diffs+' 項有差異':'');
+    });
+  });
 }
 
 // ══ Manual Sale ══
@@ -3455,7 +3521,30 @@ function exportReport(){
 
 
 
+
+
+  // 盤點分類篩選
+  const stCatSel=$el('st-cat-sel');
+  if(stCatSel)stCatSel.addEventListener('change',function(){
+    const cat=this.value;
+    window._stCatFilter=cat;
+    filtST=cat?PRODS.filter(p=>p.cat===cat):[...PRODS];
+    renderST();
+  });
+  const stSearch=$el('st-search');
+  if(stSearch)stSearch.addEventListener('input',function(){
+    const q=this.value.toLowerCase();
+    const cat=window._stCatFilter||'';
+    filtST=PRODS.filter(p=>
+      (!cat||p.cat===cat)&&
+      (!q||p.name.toLowerCase().includes(q)||p.id.toLowerCase().includes(q))
+    );
+    renderST();
+  });
+
 </script>
+
+
 
 
 

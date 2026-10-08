@@ -568,6 +568,18 @@ th.r,td.r{text-align:right}
       <div class="card"><div class="card-hd"><div class="card-title">👤 員工名單</div><button class="btn btn-sm" id="btn-add-staff">＋</button></div><div style="padding:10px 14px" id="staff-list"></div></div>
       <div class="card"><div class="card-hd"><div class="card-title">🏭 廠商名單</div><button class="btn btn-sm" id="btn-add-vendor">＋</button></div><div style="padding:10px 14px" id="vendors-list"></div></div>
       <div class="card"><div class="card-hd"><div class="card-title">📂 商品分類</div><button class="btn btn-sm" id="btn-add-cat">＋</button></div><div style="padding:10px 14px" id="categories-list"></div></div>
+      <!-- 子類管理 -->
+      <div class="card"><div class="card-hd"><div class="card-title">📁 子類管理</div></div>
+        <div style="padding:10px 14px">
+          <div style="font-size:11px;color:var(--tx2);margin-bottom:8px">選擇分類後新增或刪除子類</div>
+          <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
+            <select class="fis" id="subcat-parent-sel" style="min-width:120px" onchange="renderSubCatSettings()"></select>
+            <input type="text" class="fis" id="subcat-new-input" placeholder="新子類名稱" style="min-width:100px;flex:1">
+            <button class="btn btn-sm btn-grn" onclick="addSubCat()">＋ 新增</button>
+          </div>
+          <div id="subcat-list"></div>
+        </div>
+      </div>
       <div class="card"><div class="card-hd"><div class="card-title">🛒 銷售管道</div><button class="btn btn-sm" id="btn-add-channel">＋</button></div><div style="padding:10px 14px" id="channels-list"></div></div>
       <div class="card"><div class="card-hd"><div class="card-title">💳 付款方式</div><button class="btn btn-sm" id="btn-add-payment">＋</button></div><div style="padding:10px 14px" id="payments-list"></div></div>
       <div class="card"><div class="card-hd"><div class="card-title">🚚 出貨方式</div><button class="btn btn-sm" id="btn-add-ship">＋</button></div><div style="padding:10px 14px" id="ships-list"></div></div>
@@ -704,6 +716,12 @@ th.r,td.r{text-align:right}
 
 
 <!-- DATA + LOGIC --><script>
+
+
+
+
+
+
 
 
 
@@ -2794,10 +2812,62 @@ async function loadFromCloud(){
   }
 }
 
+
+function renderSubCatSettings(){
+  const sel=$el('subcat-parent-sel');
+  if(sel){
+    const cur=sel.value||Object.keys(CAT_SUB_MAP)[0]||'';
+    sel.innerHTML=Object.keys(CAT_SUB_MAP).map(c=>'<option'+(c===cur?' selected':'')+'>'+c+'</option>').join('');
+    if(!sel.value&&Object.keys(CAT_SUB_MAP).length)sel.value=Object.keys(CAT_SUB_MAP)[0];
+  }
+  const cat=sel?sel.value:'';
+  const list=$el('subcat-list');
+  if(!list||!cat)return;
+  const subs=CAT_SUB_MAP[cat]||[];
+  if(!subs.length){list.innerHTML='<div style="font-size:11px;color:var(--tx3);padding:8px 0">此分類尚無子類</div>';return;}
+  list.innerHTML='';
+  subs.forEach(s=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bdr)';
+    row.innerHTML='<span style="font-size:12px">'+s+'</span>';
+    const btn=document.createElement('button');
+    btn.className='btn btn-sm';btn.style.cssText='background:var(--red);color:#fff;font-size:10px';
+    btn.textContent='刪除';
+    btn.addEventListener('click',()=>removeSubCat(cat,s));
+    row.appendChild(btn);list.appendChild(row);
+  });
+}
+
+function addSubCat(){
+  const sel=$el('subcat-parent-sel');
+  const inp=$el('subcat-new-input');
+  if(!sel||!inp)return;
+  const cat=sel.value,sub=inp.value.trim();
+  if(!cat||!sub){showToast('請選擇分類並輸入子類名稱','err');return;}
+  if(!CAT_SUB_MAP[cat])CAT_SUB_MAP[cat]=[];
+  if(CAT_SUB_MAP[cat].includes(sub)){showToast('此子類已存在','err');return;}
+  CAT_SUB_MAP[cat].push(sub);
+  inp.value='';
+  saveSettings();
+  renderSubCatSettings();
+  showToast('已新增子類：'+sub);
+}
+function removeSubCat(cat,sub){
+  if(!confirm('確定刪除子類「'+sub+'」？'))return;
+  if(CAT_SUB_MAP[cat]){
+    CAT_SUB_MAP[cat]=CAT_SUB_MAP[cat].filter(s=>s!==sub);
+    saveSettings();
+    renderSubCatSettings();
+    showToast('已刪除子類：'+sub);
+  }
+}
 function renderSettingsPage(){
   renderSettingList('staff-list','STAFF');renderSettingList('vendors-list','VENDORS');
   renderSettingList('categories-list','CATEGORIES');renderSettingList('channels-list','CHANNELS');
   renderSettingList('payments-list','PAYMENTS');renderSettingList('ships-list','SHIPS');
+  renderSubCatSettings();
+  const spsel=$el('subcat-parent-sel');
+  if(spsel)spsel.onchange=renderSubCatSettings;
 }
 function getArr(key){return{STAFF,VENDORS,CATEGORIES,CHANNELS,PAYMENTS,SHIPS}[key]||[];}
 function renderSettingList(cid,key){
@@ -3133,8 +3203,8 @@ function init(){
   const bspe=$el('btn-save-prod-edit');if(bspe)bspe.addEventListener('click',saveProdEdit);
   const bcpe=$el('btn-cancel-prod-edit');if(bcpe)bcpe.addEventListener('click',()=>closeModal('prod-modal'));
   const bcpdm=$el('btn-close-pdm');if(bcpdm)bcpdm.addEventListener('click',()=>closeModal('prod-detail-modal'));
-  const bcpm=$el('btn-close-prod-modal');if(bcpm)bcpm.addEventListener('click',()=>closeModal('prod-modal'));
-
+  const bdp=$el('btn-delete-prod');if(bdp)bdp.addEventListener('click',()=>deleteProd(editingProdId));
+  
   // Order modal
   const bcom=$el('btn-close-ord-modal');if(bcom)bcom.addEventListener('click',()=>closeModal('ord-modal'));
 
@@ -3379,7 +3449,19 @@ function exportReport(){
 
 
 
+
+
+
+
+
+
 </script>
+
+
+
+
+
+
 
 
 

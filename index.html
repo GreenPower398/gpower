@@ -761,6 +761,8 @@ th.r,td.r{text-align:right}
 
 
 
+
+
 const HIST_NAME_MAP={
   // 舊網站商品編號 → 新品號
   "短效活力貼":"HP01001","長效活力貼":"HP02001","隱形款活力貼":"HP03001",
@@ -1366,9 +1368,10 @@ function matchByKw(name){
   const n=name.toLowerCase().replace(/[\s\u3000]+/g,'').replace(/[｜！？（）【】②③④⑤]/g,'');
   let best=null,bestLen=0;
   for(const p of PRODS){
-    for(const kw of (p.kw||[])){
-      const k=kw.toLowerCase().replace(/[\s\u3000]+/g,'');
-      if(k&&n.includes(k)&&k.length>bestLen){best=p;bestLen=k.length;}
+    const kws=Array.isArray(p.kw)?p.kw:(p.kw?[String(p.kw)]:[]);
+    for(const kw of kws){
+      const k=String(kw).toLowerCase().replace(/[\s\u3000]+/g,'').replace(/[｜！？（）【】②③④⑤]/g,'');
+      if(k.length>=2&&n.includes(k)&&k.length>bestLen){best=p;bestLen=k.length;}
     }
   }
   return best;
@@ -2920,7 +2923,7 @@ async function loadFromCloud(){
       }
       // 還原自訂商品（不在原始 PRODS 清單裡的）
       if(r.is_custom&&r.custom_name&&!PRODS.find(x=>x.id===r.product_id)){
-        PRODS.push({id:r.product_id,name:r.custom_name,kw:r.custom_name,cat:r.custom_cat||'其他',sub:r.custom_sub||'其他',vendor:r.vendor||'',cost:r.cost!=null?parseFloat(r.cost):null,price:r.price!=null?parseFloat(r.price):null,disabled:r.disabled||false});
+        PRODS.push({id:r.product_id,name:r.custom_name,kw:[r.custom_name,r.product_id],cat:r.custom_cat||'其他',sub:r.custom_sub||'其他',vendor:r.vendor||'',cost:r.cost!=null?parseFloat(r.cost):null,price:r.price!=null?parseFloat(r.price):null,disabled:r.disabled||false});
       }
     });
 
@@ -3619,7 +3622,11 @@ function exportReport(){
 
 
 
+
+
 </script>
+
+
 
 
 

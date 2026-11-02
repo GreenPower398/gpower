@@ -267,6 +267,7 @@ th.r,td.r{text-align:right}
       <div class="sc"><div class="sc-lbl">平均客單價</div><div class="sc-val cy" id="ov-avg">—</div></div>
     </div>
 
+    <div id="ov-ana-period" style="margin:12px 2px 4px;font-size:12px;color:var(--tx2)"></div>
     <!-- 分類圓餅 + 熱銷 -->
     <div class="chart-row" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
       <div class="card">
@@ -727,6 +728,7 @@ th.r,td.r{text-align:right}
 
 
 <!-- DATA + LOGIC --><script>
+
 
 
 
@@ -1838,10 +1840,12 @@ function renderOverview(){
     ml.innerHTML=data.map(d=>'<div style="width:'+_barW+'px;text-align:center;font-size:8px;color:var(--tx3);flex-shrink:0">'+d.label+'<\/div>').join('');
     ml.style.display='flex';ml.style.gap=_gap+'px';
   }
-
-
-
+  // 分析區跟著同一個期間重畫
+  try{renderAnalysis();}catch(e){console.warn('renderAnalysis',e);}
+  try{renderOvExtra();}catch(e){console.warn('renderOvExtra',e);}
+  const _p=$el('ov-ana-period');if(_p)_p.textContent='📅 以下分析期間：'+pStr;
 }
+
 function renderBars(id,entries,key){
   const el=$el(id);if(!el)return;
   if(!entries.length){el.innerHTML='<div style="color:var(--tx3);font-size:11px">尚無資料<\/div>';return;}
@@ -1856,7 +1860,7 @@ function renderBars(id,entries,key){
 
 // ══ Analysis ══
 function renderAnalysis(){
-  const{mf,sf,df,dt}=getAnaParams();
+  const{mf,df,dt}=getOvParams(),sf='';
   const{rev,profit,margin,nOrds,items,ords}=calcStats(mf,sf,df,dt);
   $set('ana-rev',fmt(rev));$set('ana-profit',fmt(profit));
   $set('ana-mg-sub','毛利率 '+margin.toFixed(1)+'%');
@@ -3031,7 +3035,6 @@ function go(page){
   const nav=$el('nav-'+page);if(nav)nav.classList.add('on');
   if(page==='overview'){
     setTimeout(renderOverview,50);
-    setTimeout(()=>{try{renderAnalysis();}catch(e){}try{renderOvExtra();}catch(e){}},150);
   } else if(page==='analysis'){go('overview');return;}
   else if(page==='inventory')renderInventory();
   else if(page==='purchase')renderPurchases();
@@ -3612,7 +3615,9 @@ function exportReport(){
 
 
 
+
 </script>
+
 
 
 

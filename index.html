@@ -759,6 +759,8 @@ th.r,td.r{text-align:right}
 
 
 
+
+
 const HIST_NAME_MAP={
   // 舊網站商品編號 → 新品號
   "短效活力貼":"HP01001","長效活力貼":"HP02001","隱形款活力貼":"HP03001",
@@ -796,12 +798,12 @@ const HIST_NAME_MAP={
   "Snano":"AS07001","Snano擴香儀":"AS07001","Snano-香氛片":"AS08001","Snano-磁吸夾":"AS09001",
   "Smini":"AS01001","Smini超值":"AS02001","Smini豪華":"AS03001",
   // 歷史資料名稱
-  "Dr. Li 活力貼 30入":"HP01001","Dr.Li活力貼30入":"HP01001","活力貼":"HP01001",
+  
   "順勢活力貼":"HP01001","痘痘貼":"HP03001","隱形貼片":"HP03001",
   "外掛眼鏡（白）":"CG03001","外掛眼鏡（黑）":"CG03002",
-  "外掛眼鏡(白)":"CG03001","外掛眼鏡(黑)":"CG03002","非外掛眼鏡":"CG01001",
+  "外掛眼鏡(白)":"CG03001","外掛眼鏡(黑)":"CG03002",
   "遠紅外線抗磁涉片":"ES01001","遠紅外線片":"ES01001",
-  "QBER魔法貼":"ES02001","接地關節保養組":"GA04001",
+  "接地關節保養組":"GA04001",
   "接地枕頭套 粉":"GB04001","接地枕頭套 藍":"GB04002",
   "接地枕頭套粉":"GB04001","接地枕頭套藍":"GB04002",
   "接地休閒鞋 粉":"GS01238","接地休閒鞋 黑":"GS01140","接地休閒鞋 藍":"GS01042",
@@ -1353,8 +1355,10 @@ function loadSettings(){
 }
 
 // ══ Helpers ══
+const HIST_STANDALONE=new Set(["Dr. Li 活力貼 30入", "Dr.Li活力貼30入", "Dr. Li 活力貼", "活力貼", "非外掛眼鏡", "QBER魔法貼"]);
 function matchByKw(name){
   if(!name) return null;
+  if(HIST_STANDALONE.has(String(name).trim())) return null; // 舊商品：保持獨立，不併入現行品號
   // 1. 先查名稱對照表
   const mapped=HIST_NAME_MAP[name]||HIST_NAME_MAP[name.trim()];
   if(mapped){const p=PRODS.find(x=>x.id===mapped);if(p)return p;}
@@ -2762,36 +2766,33 @@ function parseFileHTML(text,filename){
       const color=(colors[j]||'').replace(/free/gi,'').trim();
       const size=(sizes[j]||'').replace(/free/gi,'').trim();
       // 嘗試用商品編號+顏色+尺寸自動組合品號
-      let prod=null;
+      let prod=null,sizeFailed=false;
+      const codeT=String(code||'').trim();
       if(size||color){
-        // 先從 HIST_NAME_MAP 找基礎品號
-        const baseId=HIST_NAME_MAP[code]||HIST_NAME_MAP[name];
+        // 款式前綴（如 GL032、GL041）本身就是 baseId；否則查舊名稱對照表
+        const baseId=(/^[A-Z]{2}\d{3}$/.test(codeT)?codeT:null)||HIST_NAME_MAP[codeT]||HIST_NAME_MAP[name];
         if(baseId){
-          // 嘗試組合完整品號（顏色縮寫+尺寸）
           const sizeNum=size.replace(/[^0-9\/]/g,'');
-          // 直接查 PRODS 找到品號前綴相同且名稱包含顏色和尺寸的
-          const base3=baseId.slice(0,5); // 前5碼如 GL032
-          const candidates=PRODS.filter(p=>p.id.startsWith(base3));
+          const base5=baseId.slice(0,5); // 前5碼=款式+顏色，後2碼=尺寸（成對尺寸取第一個數字）
+          const candidates=PRODS.filter(p=>p.id.startsWith(base5));
           if(candidates.length>0&&sizeNum){
-            // 找名稱包含尺寸的
-            prod=candidates.find(p=>{
-              const pid=p.id;
-              return pid.endsWith(sizeNum.replace('/',''))||pid.endsWith(sizeNum.split('/')[0]);
-            })||candidates.find(p=>p.name&&p.name.includes(sizeNum))||candidates[0];
-          } else if(candidates.length>0){
+            const first=sizeNum.split('/')[0];
+            prod=candidates.find(p=>p.id===base5+first)||null;
+            if(!prod)sizeFailed=true; // 找不到該尺寸：不亂猜成別的尺寸
+          } else if(candidates.length===1){
             prod=candidates[0];
           }
         }
       }
-      // 如果尺寸比對失敗，用一般方式
-      if(!prod) prod=matchByKw(code)||matchByKw(name);
+      // 尺寸沒對上的鞋子保持未配對，不用模糊比對以免全部併成同一個尺寸
+      if(!prod&&!sizeFailed) prod=matchByKw(codeT)||matchByKw(name);
       const prodId=prod?prod.id:null;
       return{name,code,qty,price,sub,actualSub:Math.round(sub*ratio),prod,prodId};
     });
     const discount=parseFloat(row['coupon']||0)+parseFloat(row['回饋金']||0)+parseFloat(row['購物金']||0);
     if(isExisting){
       const existing=ORDERS.find(o=>o.id===row['訂單編號']);
-      if(existing){existing.status=row['訂單狀態'];existing.actual=parseFloat(row['訂單實際金額'])||existing.actual;}
+      if(existing){existing.status=row['訂單狀態'];existing.actual=parseFloat(row['訂單實際金額'])||existing.actual;existing.items=items;existing.discount=discount;}
       added++;continue;
     }
     ORDERS.push({id:row['訂單編號'],date:row['下單日期'],customer:row['訂購人姓名'],status:row['訂單狀態'],actual,payment:row['付款方式'],ship:row['出貨方式'],address:row['收件人地址'],channel:'官網下單',note:row['客戶備註']||'',discount,items,filename});
@@ -3616,7 +3617,11 @@ function exportReport(){
 
 
 
+
+
 </script>
+
+
 
 
 
